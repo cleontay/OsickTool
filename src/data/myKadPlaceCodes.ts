@@ -1,0 +1,26 @@
+// Malaysian MyKad birthplace codes (the 2 digits after the YYMMDD prefix).
+// Source: publicly documented MyKad numbering scheme.
+export const MYKAD_PLACE_CODES: Record<string, string> = {
+  '01': 'Johor', '21': 'Johor', '22': 'Johor', '23': 'Johor', '24': 'Johor',
+  '02': 'Kedah', '25': 'Kedah', '26': 'Kedah', '27': 'Kedah',
+  '03': 'Kelantan', '28': 'Kelantan', '29': 'Kelantan',
+  '04': 'Malacca', '30': 'Malacca',
+  '05': 'Negeri Sembilan', '31': 'Negeri Sembilan', '59': 'Negeri Sembilan',
+  '06': 'Pahang', '32': 'Pahang', '33': 'Pahang',
+  '07': 'Penang', '34': 'Penang', '35': 'Penang',
+  '08': 'Perak', '36': 'Perak', '37': 'Perak', '38': 'Perak', '39': 'Perak',
+  '09': 'Perlis', '40': 'Perlis',
+  '10': 'Selangor', '41': 'Selangor', '42': 'Selangor', '43': 'Selangor', '44': 'Selangor',
+  '11': 'Terengganu', '45': 'Terengganu', '46': 'Terengganu',
+  '12': 'Sabah', '47': 'Sabah', '48': 'Sabah', '49': 'Sabah',
+  '13': 'Sarawak', '50': 'Sarawak', '51': 'Sarawak', '52': 'Sarawak', '53': 'Sarawak',
+  '14': 'Federal Territory of Kuala Lumpur', '54': 'Federal Territory of Kuala Lumpur',
+  '55': 'Federal Territory of Kuala Lumpur', '56': 'Federal Territory of Kuala Lumpur',
+  '57': 'Federal Territory of Kuala Lumpur',
+  '15': 'Federal Territory of Labuan', '58': 'Federal Territory of Labuan',
+  '16': 'Federal Territory of Putrajaya',
+  '82': 'Born outside Malaysia (unspecified)',
+  '71': 'Born outside Malaysia', '72': 'Born outside Malaysia', '74': 'Born outside Malaysia',
+  '75': 'Born outside Malaysia', '76': 'Born outside Malaysia', '77': 'Born outside Malaysia',
+  '78': 'Born outside Malaysia', '79': 'Born outside Malaysia',
+};
