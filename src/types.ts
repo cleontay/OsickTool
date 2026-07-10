@@ -9,6 +9,8 @@ export type QueryType =
 export interface SearchQuery {
   type: QueryType;
   value: string;
+  /** ISO 3166-1 alpha-2 region code, e.g. "US" - used as a parsing hint for phone queries. */
+  country?: string;
 }
 
 export type TabId =

@@ -60,8 +60,10 @@ class Store {
     const key = `${query.type}:${value.toLowerCase()}`;
     if (this.state.searchedValues.has(key)) return;
 
+    const normalizedQuery: SearchQuery = { type: query.type, value, country: query.country };
+
     this.state.searchedValues.add(key);
-    this.state.queryHistory.push({ type: query.type, value });
+    this.state.queryHistory.push(normalizedQuery);
     this.state.isSearching = true;
     this.emit();
 
@@ -79,11 +81,11 @@ class Store {
     await Promise.all(
       connectors.map((connector) =>
         safe(async () => {
-          const results = await connector.run({ type: query.type, value }, ctx);
+          const results = await connector.run(normalizedQuery, ctx);
           if (abort.signal.aborted) return [];
           if (results.length > 0) {
             this.state.findings.push(...results);
-            this.state.runLog.push({ query: { type: query.type, value }, connectorName: connector.name, count: results.length });
+            this.state.runLog.push({ query: normalizedQuery, connectorName: connector.name, count: results.length });
             const newPivots = results.flatMap(extractPivots);
             for (const p of newPivots) {
               const pKey = `${p.type}:${p.value.toLowerCase()}`;
