@@ -1,3 +1,4 @@
+import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js';
 import type { Connector, Finding, SearchQuery } from '../types';
 import { fetchJson, nextId } from '../lib/fetchUtils';
 
@@ -24,9 +25,14 @@ export const numverifyConnector: Connector = {
     const apiKey = ctx.apiKeys.numverify;
     if (!apiKey) return [];
 
+    // NumVerify accepts local-format numbers but is far more reliable given a
+    // full E.164 number, so normalize using the selected country hint first.
+    const parsed = parsePhoneNumberFromString(query.value, query.country as CountryCode | undefined);
+    const numberToQuery = parsed ? parsed.format('E.164') : query.value;
+
     const res = await fetchJson<NumverifyResponse>(
       `https://apilayer.net/api/validate?access_key=${encodeURIComponent(apiKey)}&number=${encodeURIComponent(
-        query.value,
+        numberToQuery,
       )}`,
       { signal: ctx.signal },
     );

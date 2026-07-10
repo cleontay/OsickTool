@@ -4,11 +4,12 @@ import { store } from './state';
 import { openSettingsModal } from './ui/settingsModal';
 import { renderFindingCard } from './ui/findingCard';
 import { downloadCsv } from './lib/csvExport';
+import { getCountryOptions, getRecentCountry, setRecentCountry, guessCountryFromLocale } from './lib/countries';
 
 const QUERY_TYPES: Array<{ id: QueryType; label: string; placeholder: string }> = [
   { id: 'username', label: 'Username', placeholder: 'e.g. torvalds' },
   { id: 'email', label: 'Email address', placeholder: 'e.g. name@example.com' },
-  { id: 'phone', label: 'Phone number', placeholder: 'e.g. +1 555 123 4567' },
+  { id: 'phone', label: 'Phone number', placeholder: 'e.g. 555 123 4567 (pick a country)' },
   { id: 'ic', label: 'IC / National ID', placeholder: 'e.g. 900101-14-5678' },
   { id: 'social', label: 'Social media handle', placeholder: 'e.g. @handle' },
   { id: 'general', label: 'General / domain / IP', placeholder: 'e.g. example.com or 8.8.8.8' },
@@ -49,6 +50,7 @@ app.innerHTML = `
   <section class="search-panel panel">
     <form id="search-form" class="search-row">
       <select id="query-type"></select>
+      <select id="query-country" class="hidden"></select>
       <input type="text" id="query-value" placeholder="" autocomplete="off" />
       <button type="submit" class="primary">Search</button>
     </form>
@@ -79,6 +81,7 @@ app.innerHTML = `
 `;
 
 const typeSelect = document.getElementById('query-type') as HTMLSelectElement;
+const countrySelect = document.getElementById('query-country') as HTMLSelectElement;
 const valueInput = document.getElementById('query-value') as HTMLInputElement;
 const searchForm = document.getElementById('search-form') as HTMLFormElement;
 const searchHint = document.getElementById('search-hint') as HTMLDivElement;
@@ -94,10 +97,31 @@ for (const t of QUERY_TYPES) {
   typeSelect.appendChild(opt);
 }
 
+// Country dropdown - only relevant (and required) for phone searches, so a
+// number typed in local format resolves against the right region.
+const placeholderOpt = document.createElement('option');
+placeholderOpt.value = '';
+placeholderOpt.textContent = 'Select country…';
+placeholderOpt.disabled = true;
+countrySelect.appendChild(placeholderOpt);
+for (const c of getCountryOptions()) {
+  const opt = document.createElement('option');
+  opt.value = c.code;
+  opt.textContent = `${c.name} (+${c.callingCode})`;
+  countrySelect.appendChild(opt);
+}
+countrySelect.value = getRecentCountry() ?? guessCountryFromLocale() ?? '';
+if (!countrySelect.value) countrySelect.value = '';
+
 function updatePlaceholder(): void {
   const t = QUERY_TYPES.find((q) => q.id === typeSelect.value)!;
   valueInput.placeholder = t.placeholder;
   searchHint.textContent = `Searching as: ${t.label}. Results are consolidated into the tabs below as they arrive.`;
+
+  const isPhone = t.id === 'phone';
+  countrySelect.classList.toggle('hidden', !isPhone);
+  countrySelect.required = isPhone;
+  countrySelect.disabled = !isPhone;
 }
 typeSelect.addEventListener('change', updatePlaceholder);
 updatePlaceholder();
@@ -106,7 +130,17 @@ searchForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const value = valueInput.value.trim();
   if (!value) return;
-  store.search({ type: typeSelect.value as QueryType, value });
+  const type = typeSelect.value as QueryType;
+
+  if (type === 'phone' && !countrySelect.value) {
+    countrySelect.reportValidity();
+    return;
+  }
+
+  const country = type === 'phone' ? countrySelect.value : undefined;
+  if (country) setRecentCountry(country);
+
+  store.search({ type, value, country });
   valueInput.value = '';
 });
 
@@ -153,7 +187,7 @@ function render(): void {
   for (const q of queryHistory) {
     const chip = document.createElement('span');
     chip.className = 'chip';
-    chip.textContent = `${q.type}: ${q.value}`;
+    chip.textContent = q.country ? `${q.type} (${q.country}): ${q.value}` : `${q.type}: ${q.value}`;
     queryHistoryEl.appendChild(chip);
   }
 

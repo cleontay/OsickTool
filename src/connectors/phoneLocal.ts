@@ -1,4 +1,4 @@
-import { parsePhoneNumberFromString } from 'libphonenumber-js';
+import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js';
 import type { Connector, Finding, SearchQuery } from '../types';
 import { nextId } from '../lib/fetchUtils';
 
@@ -8,7 +8,7 @@ export const phoneLocalConnector: Connector = {
   description: 'Local, offline parsing of a phone number - country, region, number type, and valid formats.',
   supports: ['phone'],
   async run(query: SearchQuery): Promise<Finding[]> {
-    const parsed = parsePhoneNumberFromString(query.value, 'US');
+    const parsed = parsePhoneNumberFromString(query.value, query.country as CountryCode | undefined);
     if (!parsed) {
       return [
         {
@@ -17,7 +17,9 @@ export const phoneLocalConnector: Connector = {
           connectorName: 'Phone Number Analysis',
           tab: 'phone',
           title: 'Could not parse phone number',
-          detail: 'Try including the country code, e.g. +1 555 555 5555.',
+          detail: query.country
+            ? `Doesn't look like a valid number for the selected country.`
+            : 'Select a country, or include the country code, e.g. +1 555 555 5555.',
           confidence: 'info',
           query,
           timestamp: Date.now(),
