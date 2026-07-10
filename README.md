@@ -8,17 +8,25 @@ as a PWA.
 ## What it does
 
 1. Pick a search type — **username, email, phone number, IC/national ID, social
-   media handle,** or **general** (domain/IP/keyword) — and enter a value.
+   media handle,** or **general** (domain/IP/keyword) — and enter a value. Phone
+   searches also ask for a country, so local-format numbers resolve correctly.
 2. OsickTool fans the query out to every free/public source that supports that type
    and consolidates results into tabs: **Identity, Accounts, Email, Phone,
    Web & Infrastructure, General**.
-3. New identifiers found in the results (emails, usernames, domains, IPs) are
+3. Sources that can reveal a real name/email behind a handle - GitHub commit
+   authorship, domain WHOIS/RDAP registrant records, cross-referenced profile
+   fields - feed a **Consolidated Profile** card pinned atop the Identity tab,
+   built by aggregating name/email/location/organization fields across every
+   source collected so far.
+4. New identifiers found in the results (emails, usernames, domains, IPs) are
    surfaced in the **Pivots** tab so you can click to search them too and keep
    enriching the picture.
-4. Export everything collected so far as a **PDF report** or a **CSV**, at any time.
+5. Export everything collected so far - including the consolidated profile - as
+   a **PDF report** or a **CSV**, at any time.
 
 Nothing persists between sessions unless you export it yourself. Reloading the page
-wipes all findings.
+wipes all findings. The layout is responsive (desktop and mobile) and installable
+as a PWA.
 
 ## Sources
 
@@ -33,15 +41,19 @@ wipes all findings.
 | Keybase | username, social | Also surfaces cryptographically-proven linked accounts |
 | Chess.com / Lichess / Codeforces | username | Public player profiles |
 | Gravatar | email | Avatar existence check (via `<img>` load, CORS-proof) + profile JSON |
+| **GitHub Commit Identity** | username, social | Harvests real name/email pairs from public commit authorship - reveals the person behind a handle even when their profile email is hidden |
+| **Domain Registration (RDAP)** | general (domain) | WHOIS/RDAP registrant name/email/org when not privacy-redacted |
+| **IP Geolocation** | general (IPv4) | City/region/ISP/coordinates via ipapi.co |
 | Google DNS-over-HTTPS | email, general | MX/A/TXT/NS records for a domain |
 | DuckDuckGo Instant Answer | general, social, username | General-purpose lookups |
 | Wikipedia | general, social, username | Full-text article search |
 | Shodan InternetDB | general (IPv4) | Free, keyless open-port/CVE lookup |
 | Email format analysis | email | Local: disposable/free-provider detection, plus-tag parsing |
-| Phone number analysis | phone | Local: `libphonenumber-js` parsing/validation |
+| Phone number analysis | phone | Local: `libphonenumber-js` parsing/validation against the country you select |
 | IC/NRIC decoder | ic | Local: Malaysia MyKad + Singapore NRIC/FIN decoding & checksum |
 | Site Directory | username, social | Generates candidate profile links across 45+ popular platforms that don't expose a public API (Instagram, X, TikTok, LinkedIn, etc.) — unverified by default |
 | NumVerify, Hunter.io, Shodan (full) | phone, email, general | Optional — bring your own free-tier API key in Settings |
+| **Consolidated Profile** | (all) | Not a source - synthesizes name/email/location/organization fields already returned by the sources above into one cross-referenced identity card |
 
 Connectors are defensive by design: if a source blocks the request (CORS, rate
 limiting, downtime), that connector silently contributes zero results instead of

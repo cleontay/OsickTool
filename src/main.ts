@@ -5,6 +5,7 @@ import { openSettingsModal } from './ui/settingsModal';
 import { renderFindingCard } from './ui/findingCard';
 import { downloadCsv } from './lib/csvExport';
 import { getCountryOptions, getRecentCountry, setRecentCountry, guessCountryFromLocale } from './lib/countries';
+import { buildIdentitySummary } from './lib/identitySummary';
 
 const QUERY_TYPES: Array<{ id: QueryType; label: string; placeholder: string }> = [
   { id: 'username', label: 'Username', placeholder: 'e.g. torvalds' },
@@ -149,9 +150,14 @@ document.getElementById('btn-reset')?.addEventListener('click', () => {
   if (confirm('Clear all findings from this session? This cannot be undone.')) store.reset();
 });
 
+function findingsForExport(): typeof store.state.findings {
+  const summary = buildIdentitySummary(store.state.findings);
+  return summary ? [summary, ...store.state.findings] : store.state.findings;
+}
+
 document.getElementById('btn-export-csv')?.addEventListener('click', () => {
   if (store.state.findings.length === 0) return;
-  downloadCsv(store.state.findings, `osicktool-report-${Date.now()}.csv`);
+  downloadCsv(findingsForExport(), `osicktool-report-${Date.now()}.csv`);
 });
 
 document.getElementById('btn-export-pdf')?.addEventListener('click', async (e) => {
@@ -163,7 +169,7 @@ document.getElementById('btn-export-pdf')?.addEventListener('click', async (e) =
   try {
     const { downloadReportPdf } = await import('./lib/pdfExport');
     const targets = [...new Set(store.state.queryHistory.map((q) => q.value))].join(', ');
-    downloadReportPdf(store.state.findings, targets, `osicktool-report-${Date.now()}.pdf`);
+    downloadReportPdf(findingsForExport(), targets, `osicktool-report-${Date.now()}.pdf`);
   } finally {
     btn.disabled = false;
     btn.textContent = originalLabel;
@@ -191,10 +197,13 @@ function render(): void {
     queryHistoryEl.appendChild(chip);
   }
 
+  const identitySummary = buildIdentitySummary(findings);
+
   // Tabs
   tabsEl.innerHTML = '';
   for (const tab of TABS) {
-    const count = tab.id === 'pivots' ? pivots.length : findings.filter((f) => f.tab === tab.id).length;
+    let count = tab.id === 'pivots' ? pivots.length : findings.filter((f) => f.tab === tab.id).length;
+    if (tab.id === 'identity' && identitySummary) count += 1;
     const btn = document.createElement('button');
     btn.className = `tab-btn${activeTab === tab.id ? ' active' : ''}`;
     btn.innerHTML = `${tab.label}${count > 0 ? `<span class="count">${count}</span>` : ''}`;
@@ -208,6 +217,7 @@ function render(): void {
     resultsEl.appendChild(renderPivotsPanel());
   } else {
     const items = findings.filter((f) => f.tab === activeTab);
+    if (activeTab === 'identity' && identitySummary) items.unshift(identitySummary);
     if (items.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'empty-state';

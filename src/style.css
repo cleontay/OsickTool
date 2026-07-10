@@ -293,6 +293,14 @@ button.small { padding: 5px 10px; font-size: 12px; }
   gap: 8px;
 }
 
+.finding-card.identity-summary-card {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, var(--primary-bg), #fff 60%);
+  border: 1px solid #bfdbfe;
+}
+.identity-summary-card .fc-title { font-size: 17px; }
+.identity-summary-card .fc-data { grid-template-columns: 140px 1fr; }
+
 .finding-card .fc-head {
   display: flex;
   align-items: flex-start;
