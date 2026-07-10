@@ -13,6 +13,7 @@ function humanizeKey(key: string): string {
 export function renderFindingCard(finding: Finding): HTMLElement {
   const card = document.createElement('article');
   card.className = 'finding-card panel';
+  if (finding.connectorId === 'identity-summary') card.classList.add('identity-summary-card');
 
   const head = document.createElement('div');
   head.className = 'fc-head';

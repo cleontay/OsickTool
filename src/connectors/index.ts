@@ -18,10 +18,14 @@ import { hunterConnector } from './hunter';
 import { internetDbConnector, shodanConnector } from './shodan';
 import { phoneLocalConnector } from './phoneLocal';
 import { icDecoderConnector } from './icDecoders';
+import { githubCommitsConnector } from './githubCommits';
+import { ipGeoConnector } from './ipGeo';
+import { rdapConnector } from './rdap';
 
 export const CONNECTORS: Connector[] = [
   // Identity
   icDecoderConnector,
+  githubCommitsConnector,
   // Accounts / username / social
   githubConnector,
   gitlabConnector,
@@ -47,6 +51,8 @@ export const CONNECTORS: Connector[] = [
   wikipediaConnector,
   internetDbConnector,
   shodanConnector,
+  ipGeoConnector,
+  rdapConnector,
 ];
 
 export function connectorsFor(type: Connector['supports'][number]): Connector[] {
