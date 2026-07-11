@@ -65,4 +65,6 @@ export interface PivotCandidate {
   value: string;
   type: QueryType;
   origin: string; // connector name that surfaced it
+  /** For phone pivots: the region libphonenumber-js resolved while extracting it. */
+  country?: string;
 }
