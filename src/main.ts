@@ -6,6 +6,7 @@ import { renderFindingCard } from './ui/findingCard';
 import { downloadCsv } from './lib/csvExport';
 import { getCountryOptions, getRecentCountry, setRecentCountry, guessCountryFromLocale } from './lib/countries';
 import { buildIdentitySummary } from './lib/identitySummary';
+import { getAutoEnrichEnabled, setAutoEnrichEnabled, getMaxDepth, getMaxAutoSearches } from './lib/enrichmentPrefs';
 
 const QUERY_TYPES: Array<{ id: QueryType; label: string; placeholder: string }> = [
   { id: 'username', label: 'Username', placeholder: 'e.g. torvalds' },
@@ -56,12 +57,22 @@ app.innerHTML = `
       <button type="submit" class="primary">Search</button>
     </form>
     <div class="search-hint" id="search-hint"></div>
+    <label class="auto-enrich-toggle" id="auto-enrich-row">
+      <input type="checkbox" id="auto-enrich-checkbox" />
+      <span>🔗 Auto-enrich &mdash; automatically search every new email, username, phone number, and name this uncovers</span>
+    </label>
     <div class="query-history" id="query-history"></div>
   </section>
+
+  <div class="budget-banner hidden" id="budget-banner">
+    <span>⏸ Auto-enrich paused &mdash; it hit its limit for this session. Findings so far are untouched, and remaining leads are still listed in the Pivots tab to search manually.</span>
+    <button class="small primary" id="btn-resume-enrich">Resume</button>
+  </div>
 
   <div class="toolbar">
     <div class="status" id="status-line"></div>
     <div class="export-actions">
+      <button class="hidden" id="btn-stop">⏹ Stop</button>
       <button id="btn-export-csv">⬇ Export CSV</button>
       <button class="primary" id="btn-export-pdf">⬇ Export PDF Report</button>
     </div>
@@ -90,6 +101,12 @@ const queryHistoryEl = document.getElementById('query-history') as HTMLDivElemen
 const statusLine = document.getElementById('status-line') as HTMLDivElement;
 const tabsEl = document.getElementById('tabs') as HTMLElement;
 const resultsEl = document.getElementById('results') as HTMLElement;
+const autoEnrichCheckbox = document.getElementById('auto-enrich-checkbox') as HTMLInputElement;
+const budgetBanner = document.getElementById('budget-banner') as HTMLDivElement;
+const stopBtn = document.getElementById('btn-stop') as HTMLButtonElement;
+
+autoEnrichCheckbox.checked = getAutoEnrichEnabled();
+autoEnrichCheckbox.addEventListener('change', () => setAutoEnrichEnabled(autoEnrichCheckbox.checked));
 
 for (const t of QUERY_TYPES) {
   const opt = document.createElement('option');
@@ -149,6 +166,8 @@ document.getElementById('btn-settings')?.addEventListener('click', openSettingsM
 document.getElementById('btn-reset')?.addEventListener('click', () => {
   if (confirm('Clear all findings from this session? This cannot be undone.')) store.reset();
 });
+stopBtn.addEventListener('click', () => store.stop());
+document.getElementById('btn-resume-enrich')?.addEventListener('click', () => store.resumeAutoEnrich());
 
 function findingsForExport(): typeof store.state.findings {
   const summary = buildIdentitySummary(store.state.findings);
@@ -177,23 +196,37 @@ document.getElementById('btn-export-pdf')?.addEventListener('click', async (e) =
 });
 
 function render(): void {
-  const { findings, pivots, isSearching, activeTab, queryHistory, runLog } = store.state;
+  const { findings, pivots, isSearching, activeTab, queryHistory, runLog, autoQueue, autoEnrichCount, autoEnrichBudgetExhausted } = store.state;
 
   // Status line
-  statusLine.innerHTML = isSearching
-    ? `<span class="spinner"></span> Querying sources…`
-    : findings.length > 0
-      ? `${findings.length} finding(s) across ${new Set(runLog.map((r) => r.connectorName)).size} source(s)`
+  const sourceCount = new Set(runLog.map((r) => r.connectorName)).size;
+  const baseStatus =
+    findings.length > 0
+      ? `${findings.length} finding(s) across ${sourceCount} source(s)`
       : queryHistory.length > 0
         ? 'No findings yet for this query.'
         : 'Run a search to get started.';
+
+  if (isSearching) {
+    const queued = autoQueue.length;
+    const enrichSuffix = autoEnrichCount > 0 || queued > 0 ? ` — auto-enriching (${autoEnrichCount} searched, ${queued} queued)` : '';
+    statusLine.innerHTML = `<span class="spinner"></span> Querying sources…${enrichSuffix}`;
+  } else {
+    const enrichSuffix = autoEnrichCount > 0 ? ` · auto-enriched ${autoEnrichCount} lead(s)` : '';
+    statusLine.textContent = baseStatus + enrichSuffix;
+  }
+
+  stopBtn.classList.toggle('hidden', !isSearching);
+  budgetBanner.classList.toggle('hidden', !autoEnrichBudgetExhausted);
 
   // Query history chips
   queryHistoryEl.innerHTML = '';
   for (const q of queryHistory) {
     const chip = document.createElement('span');
-    chip.className = 'chip';
-    chip.textContent = q.country ? `${q.type} (${q.country}): ${q.value}` : `${q.type}: ${q.value}`;
+    chip.className = q.auto ? 'chip chip-auto' : 'chip';
+    const label = q.country ? `${q.type} (${q.country}): ${q.value}` : `${q.type}: ${q.value}`;
+    chip.textContent = q.auto ? `⚡ ${label}` : label;
+    chip.title = q.auto ? `Auto-enriched at depth ${q.depth}` : 'Manually searched';
     queryHistoryEl.appendChild(chip);
   }
 
@@ -234,35 +267,44 @@ function render(): void {
 
 function renderPivotsPanel(): HTMLElement {
   const wrap = document.createElement('div');
-  if (store.state.pivots.length === 0) {
+  // Defensive filter: a pivot can briefly remain in state.pivots between
+  // being auto-queued and actually dequeued/removed - never show something
+  // that's already been searched.
+  const visible = store.state.pivots.filter((p) => !store.hasSearched(p.type, p.value, p.country));
+  if (visible.length === 0) {
     wrap.innerHTML = `<div class="empty-state"><div class="big">🧭</div><div>No new pivot candidates discovered yet. Run a search first.</div></div>`;
     return wrap;
   }
 
+  const queuedKeys = new Set(store.state.autoQueue.map((item) => `${item.query.type}:${item.query.value.toLowerCase()}`));
+
   const intro = document.createElement('p');
   intro.className = 'search-hint';
   intro.style.marginBottom = '12px';
-  intro.textContent = 'New identifiers discovered in the results above. Click one to search it and pull in more data.';
+  intro.textContent = getAutoEnrichEnabled()
+    ? `New identifiers discovered in the results above. Auto-enrich (depth ${getMaxDepth()}, up to ${getMaxAutoSearches()} searches) is chasing these automatically — click one to jump the queue, or ✕ to skip it.`
+    : 'New identifiers discovered in the results above. Auto-enrich is off, so click one to search it and pull in more data.';
   wrap.appendChild(intro);
 
   const list = document.createElement('div');
   list.className = 'pivot-list';
-  for (const p of store.state.pivots) {
+  for (const p of visible) {
     const item = document.createElement('div');
     item.className = 'pivot-item';
-    item.innerHTML = `<span class="pv-type">${p.type}</span><span>${p.value}</span>`;
+    const queued = queuedKeys.has(`${p.type}:${p.value.toLowerCase()}`);
+    item.innerHTML = `<span class="pv-type">${p.type}</span><span>${p.value}${p.country ? ` (${p.country})` : ''}</span>${queued ? '<span class="pv-queued">queued</span>' : ''}`;
     const searchBtn = document.createElement('button');
     searchBtn.className = 'small primary';
     searchBtn.textContent = 'Search';
     searchBtn.addEventListener('click', () => {
-      store.removePivot(p.value, p.type);
-      store.search({ type: p.type, value: p.value });
+      store.removePivot(p.value, p.type, p.country);
+      store.search({ type: p.type, value: p.value, country: p.country });
     });
     const dismissBtn = document.createElement('button');
     dismissBtn.className = 'small ghost';
     dismissBtn.textContent = '✕';
     dismissBtn.title = 'Dismiss';
-    dismissBtn.addEventListener('click', () => store.removePivot(p.value, p.type));
+    dismissBtn.addEventListener('click', () => store.removePivot(p.value, p.type, p.country));
     item.appendChild(searchBtn);
     item.appendChild(dismissBtn);
     list.appendChild(item);

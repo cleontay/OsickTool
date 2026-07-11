@@ -13,20 +13,55 @@ as a PWA.
 2. OsickTool fans the query out to every free/public source that supports that type
    and consolidates results into tabs: **Identity, Accounts, Email, Phone,
    Web & Infrastructure, General**.
-3. Sources that can reveal a real name/email behind a handle - GitHub commit
+3. **Auto-enrich** (on by default, toggle next to the search bar) means you don't
+   have to drive this by hand: every new email, username, phone number, or name a
+   result turns up is automatically searched too, and whatever *that* turns up
+   keeps going - so one email search can chain into usernames, phone numbers,
+   and further emails without you clicking anything. See [Auto-enrichment](#auto-enrichment)
+   below for how the chain is kept from running away with itself.
+4. Sources that can reveal a real name/email behind a handle - GitHub commit
    authorship, domain WHOIS/RDAP registrant records, cross-referenced profile
    fields - feed a **Consolidated Profile** card pinned atop the Identity tab,
-   built by aggregating name/email/location/organization fields across every
-   source collected so far.
-4. New identifiers found in the results (emails, usernames, domains, IPs) are
-   surfaced in the **Pivots** tab so you can click to search them too and keep
-   enriching the picture.
-5. Export everything collected so far - including the consolidated profile - as
+   built by aggregating name/email/phone/username/location/organization/date-of-birth
+   fields across every source collected so far (age is estimated from a decoded
+   birth date when one's available).
+5. Anything auto-enrich didn't get to - because it's off, or the chain hit its
+   depth/budget limit - is still listed in the **Pivots** tab to search manually.
+6. Export everything collected so far - including the consolidated profile - as
    a **PDF report** or a **CSV**, at any time.
 
 Nothing persists between sessions unless you export it yourself. Reloading the page
 wipes all findings. The layout is responsive (desktop and mobile) and installable
 as a PWA.
+
+## Auto-enrichment
+
+Turning an email into a name, a phone number, other emails, and further usernames
+is the actual point of the tool - so by default it doesn't wait for you to click
+through the Pivots tab one lead at a time. When a search result contains a new
+email, username/handle, phone number, or name, it's queued and searched
+automatically, and anything *that* search turns up is queued in turn. A query
+history chip marked with ⚡ means it was auto-triggered, not typed by you.
+
+This is bounded on two axes, both adjustable in Settings:
+
+- **Max chain depth** (default 4) - your own search is depth 0; a lead it finds
+  is depth 1; a lead *that* finds is depth 2, and so on. A lead beyond the max
+  depth stays in the Pivots tab for a manual click instead of auto-firing.
+- **Max auto-searches per session** (default 40) - a hard ceiling on total
+  automatic searches regardless of depth, so a long chain can't quietly exhaust
+  a free-tier API quota (NumVerify, Hunter.io, Shodan) or just run for a very
+  long time. When it's hit, a banner appears with a **Resume** button that
+  continues the chain right where it left off - useful after raising the limit.
+
+Auto-triggered searches run **one at a time** (not in a burst) to stay a
+reasonable citizen of the free APIs it's calling, while a manual search you
+type yourself always runs immediately rather than waiting behind the queue.
+Hit **Stop** at any time to abort everything in flight and clear the queue -
+findings already collected are kept, nothing is lost.
+
+Turn it off entirely with the checkbox next to the search bar (or in Settings)
+to go back to click-to-pivot behavior.
 
 ## Sources
 
@@ -53,7 +88,7 @@ as a PWA.
 | IC/NRIC decoder | ic | Local: Malaysia MyKad + Singapore NRIC/FIN decoding & checksum |
 | Site Directory | username, social | Generates candidate profile links across 45+ popular platforms that don't expose a public API (Instagram, X, TikTok, LinkedIn, etc.) — unverified by default |
 | NumVerify, Hunter.io, Shodan (full) | phone, email, general | Optional — bring your own free-tier API key in Settings |
-| **Consolidated Profile** | (all) | Not a source - synthesizes name/email/location/organization fields already returned by the sources above into one cross-referenced identity card |
+| **Consolidated Profile** | (all) | Not a source - synthesizes name/email/phone/username/location/organization/birth-date fields already returned by the sources above into one cross-referenced identity card, with age estimated from a decoded birth date |
 
 Connectors are defensive by design: if a source blocks the request (CORS, rate
 limiting, downtime), that connector silently contributes zero results instead of
@@ -120,4 +155,7 @@ confirm, not facts.
 - Add a platform to the unverified link generator: append an entry to
   `src/data/usernameSites.ts`.
 - Pivot extraction (`src/lib/pivot.ts`) scans finding text/data for new
-  emails/domains/handles/IPs automatically — no per-connector wiring needed.
+  emails/domains/handles/IPs/phone numbers/names automatically — no
+  per-connector wiring needed. It also reads a few known structured fields
+  (`username`, `nametag`, `twitter`, `name`, `fullName`) directly, since not
+  every discovered identifier shows up as free text.
