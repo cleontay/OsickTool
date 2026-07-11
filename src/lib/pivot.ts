@@ -54,12 +54,14 @@ function collectText(finding: Finding): string {
  * domains, @handles, IPs) that the analyst can pivot the search to.
  * Never includes the value that was just searched for.
  */
+// Connectors whose findings are constructed queries/links rather than
+// actually discovered data - scanning them for pivots would "discover" the
+// query's own scaffolding (a platform name, a `site:` filter) as if it were
+// new information about the target.
+const NO_PIVOT_CONNECTORS = new Set(['site-directory', 'google-dork-links']);
+
 export function extractPivots(finding: Finding): PivotCandidate[] {
-  // Generated link findings have no real discovered data - their titles are
-  // just platform names ("Dev.to", "itch.io"), which look exactly like
-  // domains to DOMAIN_RE and would otherwise "discover" the platform's own
-  // homepage as if it were new information about the target.
-  if (finding.connectorId === 'site-directory') return [];
+  if (NO_PIVOT_CONNECTORS.has(finding.connectorId)) return [];
 
   const text = collectText(finding);
   const seen = new Set<string>();

@@ -38,6 +38,18 @@ export const API_KEY_DEFS: ApiKeyDef[] = [
     helpUrl: 'https://account.shodan.io/',
     helpText: 'Free tier can look up basic host info for IPs/domains you pivot to.',
   },
+  {
+    id: 'googleCseKey',
+    label: 'Google Custom Search - API key',
+    helpUrl: 'https://developers.google.com/custom-search/v1/introduction',
+    helpText: 'Free tier gives 100 real, ranked Google results/day for Google Dork searches. Needs both this key and the Search Engine ID below.',
+  },
+  {
+    id: 'googleCseId',
+    label: 'Google Custom Search - Search Engine ID (cx)',
+    helpUrl: 'https://programmablesearchengine.google.com/controlpanel/create',
+    helpText: 'Create a Programmable Search Engine, enable "Search the entire web", then copy its Search engine ID here.',
+  },
 ];
 
 export function getApiKeys(): Record<string, string> {

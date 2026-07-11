@@ -15,6 +15,7 @@ const QUERY_TYPES: Array<{ id: QueryType; label: string; placeholder: string }> 
   { id: 'ic', label: 'IC / National ID', placeholder: 'e.g. 900101-14-5678' },
   { id: 'social', label: 'Social media handle', placeholder: 'e.g. @handle' },
   { id: 'general', label: 'General / domain / IP', placeholder: 'e.g. example.com or 8.8.8.8' },
+  { id: 'dork', label: 'Google Dork (custom query)', placeholder: 'e.g. site:example.com filetype:pdf "confidential"' },
 ];
 
 const TABS: Array<{ id: TabId; label: string }> = [
@@ -24,6 +25,7 @@ const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'phone', label: 'Phone' },
   { id: 'web', label: 'Web & Infra' },
   { id: 'other', label: 'General' },
+  { id: 'dorks', label: 'Google Dorks' },
   { id: 'pivots', label: 'Pivots' },
 ];
 
