@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 import { md5 } from '../lib/md5';
 
 interface GravatarProfile {
@@ -44,9 +44,10 @@ export const gravatarConnector: Connector = {
   supports: ['email'],
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
     const hash = md5(query.value.trim().toLowerCase());
+    const profileUrl = `https://www.gravatar.com/${hash}.json`;
     const [hasAvatar, profile] = await Promise.all([
       gravatarAvatarExists(hash, ctx.signal),
-      fetchJson<GravatarProfile>(`https://www.gravatar.com/${hash}.json`, { signal: ctx.signal }),
+      fetchJson<GravatarProfile>(profileUrl, { signal: ctx.signal }),
     ]);
 
     if (!hasAvatar && !profile?.entry?.length) return [];
@@ -64,6 +65,8 @@ export const gravatarConnector: Connector = {
         confidence: entry ? 'confirmed' : 'likely',
         query,
         timestamp: Date.now(),
+        raw: profile ?? { hasAvatar },
+        rawSourceUrl: redactUrl(profileUrl),
         data: {
           hasAvatar,
           location: entry?.currentLocation ?? undefined,
@@ -85,6 +88,8 @@ export const gravatarConnector: Connector = {
         confidence: 'confirmed',
         query,
         timestamp: Date.now(),
+        raw: profile,
+        rawSourceUrl: redactUrl(profileUrl),
         data: { domain: acc.domain, username: acc.username },
       });
     }

@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 
 interface GlUser {
   id: number;
@@ -24,10 +24,8 @@ export const gitlabConnector: Connector = {
   description: 'Public GitLab.com profile via the GitLab REST API.',
   supports: ['username', 'social'],
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
-    const users = await fetchJson<GlUser[]>(
-      `https://gitlab.com/api/v4/users?username=${encodeURIComponent(query.value)}`,
-      { signal: ctx.signal },
-    );
+    const url = `https://gitlab.com/api/v4/users?username=${encodeURIComponent(query.value)}`;
+    const users = await fetchJson<GlUser[]>(url, { signal: ctx.signal });
     if (!users || users.length === 0) return [];
     const user = users[0];
 
@@ -43,6 +41,8 @@ export const gitlabConnector: Connector = {
         confidence: 'confirmed',
         query,
         timestamp: Date.now(),
+        raw: users,
+        rawSourceUrl: redactUrl(url),
         data: {
           name: user.name,
           state: user.state,

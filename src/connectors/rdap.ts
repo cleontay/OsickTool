@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 
 const IPV4_RE = /^(\d{1,3}\.){3}\d{1,3}$/;
 const DOMAIN_RE = /^(?:[a-z0-9-]+\.)+[a-z]{2,}$/i;
@@ -45,10 +45,8 @@ export const rdapConnector: Connector = {
     const domain = query.value.trim().toLowerCase();
     if (IPV4_RE.test(domain) || !DOMAIN_RE.test(domain)) return [];
 
-    const res = await fetchJson<RdapResponse>(`https://rdap.org/domain/${encodeURIComponent(domain)}`, {
-      signal: ctx.signal,
-      timeoutMs: 10000,
-    });
+    const url = `https://rdap.org/domain/${encodeURIComponent(domain)}`;
+    const res = await fetchJson<RdapResponse>(url, { signal: ctx.signal, timeoutMs: 10000 });
     if (!res || res.errorCode || !res.ldhName) return [];
 
     const registrant = res.entities?.find((e) => e.roles?.includes('registrant'));
@@ -76,6 +74,8 @@ export const rdapConnector: Connector = {
         confidence: hasPersonalInfo ? 'confirmed' : 'info',
         query,
         timestamp: Date.now(),
+        raw: res,
+        rawSourceUrl: redactUrl(url),
         data: {
           registrantName: registrantInfo?.name,
           registrantEmail: registrantInfo?.email,

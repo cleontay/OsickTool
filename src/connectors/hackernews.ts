@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 
 interface HnUser {
   id: string;
@@ -15,10 +15,8 @@ export const hackernewsConnector: Connector = {
   description: 'Public Hacker News (Y Combinator) account profile.',
   supports: ['username', 'social'],
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
-    const user = await fetchJson<HnUser>(
-      `https://hacker-news.firebaseio.com/v0/user/${encodeURIComponent(query.value)}.json`,
-      { signal: ctx.signal },
-    );
+    const url = `https://hacker-news.firebaseio.com/v0/user/${encodeURIComponent(query.value)}.json`;
+    const user = await fetchJson<HnUser>(url, { signal: ctx.signal });
     if (!user || !user.id) return [];
 
     return [
@@ -33,6 +31,8 @@ export const hackernewsConnector: Connector = {
         confidence: 'confirmed',
         query,
         timestamp: Date.now(),
+        raw: user,
+        rawSourceUrl: redactUrl(url),
         data: {
           karma: user.karma,
           createdAt: new Date(user.created * 1000).toISOString(),

@@ -1,6 +1,6 @@
 import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js';
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 
 interface NumverifyResponse {
   valid: boolean;
@@ -30,12 +30,8 @@ export const numverifyConnector: Connector = {
     const parsed = parsePhoneNumberFromString(query.value, query.country as CountryCode | undefined);
     const numberToQuery = parsed ? parsed.format('E.164') : query.value;
 
-    const res = await fetchJson<NumverifyResponse>(
-      `https://apilayer.net/api/validate?access_key=${encodeURIComponent(apiKey)}&number=${encodeURIComponent(
-        numberToQuery,
-      )}`,
-      { signal: ctx.signal },
-    );
+    const url = `https://apilayer.net/api/validate?access_key=${encodeURIComponent(apiKey)}&number=${encodeURIComponent(numberToQuery)}`;
+    const res = await fetchJson<NumverifyResponse>(url, { signal: ctx.signal });
     if (!res || !res.valid) return [];
 
     return [
@@ -49,6 +45,8 @@ export const numverifyConnector: Connector = {
         confidence: 'confirmed',
         query,
         timestamp: Date.now(),
+        raw: res,
+        rawSourceUrl: redactUrl(url),
         data: {
           country: res.country_name,
           countryCode: res.country_code,

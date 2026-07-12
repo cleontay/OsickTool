@@ -11,13 +11,14 @@ interface AllOriginsResponse {
   status: { http_code: number };
 }
 
-async function checkViaProxy(url: string, signal: AbortSignal): Promise<boolean | null> {
-  const res = await fetchJson<AllOriginsResponse>(
-    `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-    { signal, timeoutMs: 6000 },
-  );
-  if (!res?.status) return null;
-  return res.status.http_code >= 200 && res.status.http_code < 400;
+async function checkViaProxy(
+  url: string,
+  signal: AbortSignal,
+): Promise<{ alive: boolean | null; raw: AllOriginsResponse | null; proxyUrl: string }> {
+  const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+  const res = await fetchJson<AllOriginsResponse>(proxyUrl, { signal, timeoutMs: 6000 });
+  if (!res?.status) return { alive: null, raw: res, proxyUrl };
+  return { alive: res.status.http_code >= 200 && res.status.http_code < 400, raw: res, proxyUrl };
 }
 
 /**
@@ -62,14 +63,14 @@ export const unverifiedSitesConnector: Connector = {
     const toCheck = candidates.slice(0, CAP);
     const results = await Promise.all(
       toCheck.map(async ({ site, url }) => {
-        const alive = await checkViaProxy(url, ctx.signal);
-        return { site, url, alive };
+        const { alive, raw, proxyUrl } = await checkViaProxy(url, ctx.signal);
+        return { site, url, alive, raw, proxyUrl };
       }),
     );
 
     return results
       .filter((r) => r.alive !== false)
-      .map(({ site, url, alive }) => ({
+      .map(({ site, url, alive, raw, proxyUrl }) => ({
         id: nextId(),
         connectorId: 'site-directory',
         connectorName: 'Site Directory',
@@ -83,6 +84,8 @@ export const unverifiedSitesConnector: Connector = {
         confidence: (alive === true ? 'likely' : 'unverified') as 'likely' | 'unverified',
         query,
         timestamp: Date.now(),
+        raw: raw ?? undefined,
+        rawSourceUrl: proxyUrl,
         data: { category: site.category },
       }));
   },

@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 
 const IPV4_RE = /^(\d{1,3}\.){3}\d{1,3}$/;
 
@@ -21,9 +21,8 @@ export const internetDbConnector: Connector = {
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
     if (!IPV4_RE.test(query.value)) return [];
 
-    const res = await fetchJson<InternetDbResponse>(`https://internetdb.shodan.io/${query.value}`, {
-      signal: ctx.signal,
-    });
+    const url = `https://internetdb.shodan.io/${query.value}`;
+    const res = await fetchJson<InternetDbResponse>(url, { signal: ctx.signal });
     if (!res || !res.ip) return [];
 
     return [
@@ -38,6 +37,8 @@ export const internetDbConnector: Connector = {
         confidence: 'confirmed',
         query,
         timestamp: Date.now(),
+        raw: res,
+        rawSourceUrl: redactUrl(url),
         data: {
           openPorts: res.ports?.join(', ') || undefined,
           hostnames: res.hostnames?.join(', ') || undefined,
@@ -71,10 +72,8 @@ export const shodanConnector: Connector = {
     const apiKey = ctx.apiKeys.shodan;
     if (!apiKey || !IPV4_RE.test(query.value)) return [];
 
-    const res = await fetchJson<ShodanHostResponse>(
-      `https://api.shodan.io/shodan/host/${query.value}?key=${encodeURIComponent(apiKey)}`,
-      { signal: ctx.signal },
-    );
+    const url = `https://api.shodan.io/shodan/host/${query.value}?key=${encodeURIComponent(apiKey)}`;
+    const res = await fetchJson<ShodanHostResponse>(url, { signal: ctx.signal });
     if (!res || !res.ip_str) return [];
 
     return [
@@ -89,6 +88,8 @@ export const shodanConnector: Connector = {
         confidence: 'confirmed',
         query,
         timestamp: Date.now(),
+        raw: res,
+        rawSourceUrl: redactUrl(url),
         data: {
           org: res.org ?? undefined,
           isp: res.isp ?? undefined,

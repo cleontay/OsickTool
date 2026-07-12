@@ -14,12 +14,10 @@ interface DohResponse {
 
 const RECORD_TYPES = ['MX', 'A', 'TXT', 'NS'] as const;
 
-async function queryDoh(domain: string, type: string, signal: AbortSignal): Promise<DohAnswer[]> {
-  const res = await fetchJson<DohResponse>(
-    `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${type}`,
-    { signal, headers: { Accept: 'application/dns-json' } },
-  );
-  return res?.Answer ?? [];
+async function queryDoh(domain: string, type: string, signal: AbortSignal): Promise<{ answers: DohAnswer[]; raw: DohResponse | null; url: string }> {
+  const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${type}`;
+  const res = await fetchJson<DohResponse>(url, { signal, headers: { Accept: 'application/dns-json' } });
+  return { answers: res?.Answer ?? [], raw: res, url };
 }
 
 function extractDomain(query: SearchQuery): string | null {
@@ -43,8 +41,10 @@ export const dnsConnector: Connector = {
     if (!domain) return [];
 
     const results = await Promise.all(RECORD_TYPES.map((t) => queryDoh(domain, t, ctx.signal)));
-    const [mx, a, txt, ns] = results;
+    const [mx, a, txt, ns] = results.map((r) => r.answers);
     if (mx.length === 0 && a.length === 0 && txt.length === 0 && ns.length === 0) return [];
+
+    const rawByType = Object.fromEntries(RECORD_TYPES.map((t, i) => [t, results[i].raw]));
 
     const mailProvider = mx[0]?.data.toLowerCase() ?? '';
     let provider: string | undefined;
@@ -66,6 +66,8 @@ export const dnsConnector: Connector = {
         confidence: 'confirmed',
         query,
         timestamp: Date.now(),
+        raw: rawByType,
+        rawSourceUrl: `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type={MX,A,TXT,NS}`,
         data: {
           domain,
           mxRecords: mx.map((r) => r.data).join(', ') || undefined,

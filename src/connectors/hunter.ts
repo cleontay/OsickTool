@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 
 interface HunterVerifyResponse {
   data?: {
@@ -24,12 +24,11 @@ export const hunterConnector: Connector = {
     const apiKey = ctx.apiKeys.hunter;
     if (!apiKey) return [];
 
-    const res = await fetchJson<HunterVerifyResponse>(
-      `https://api.hunter.io/v2/email-verifier?email=${encodeURIComponent(query.value)}&api_key=${encodeURIComponent(apiKey)}`,
-      { signal: ctx.signal },
-    );
+    const url = `https://api.hunter.io/v2/email-verifier?email=${encodeURIComponent(query.value)}&api_key=${encodeURIComponent(apiKey)}`;
+    const res = await fetchJson<HunterVerifyResponse>(url, { signal: ctx.signal });
     const d = res?.data;
     if (!d) return [];
+    const rawSourceUrl = redactUrl(url);
 
     const findings: Finding[] = [
       {
@@ -42,6 +41,8 @@ export const hunterConnector: Connector = {
         confidence: d.result === 'deliverable' ? 'confirmed' : 'info',
         query,
         timestamp: Date.now(),
+        raw: res,
+        rawSourceUrl,
         data: {
           result: d.result,
           score: d.score,
@@ -62,6 +63,8 @@ export const hunterConnector: Connector = {
         confidence: 'info',
         query,
         timestamp: Date.now(),
+        raw: res,
+        rawSourceUrl,
       });
     }
 

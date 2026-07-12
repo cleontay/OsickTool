@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 
 const IPV4_RE = /^(\d{1,3}\.){3}\d{1,3}$/;
 
@@ -26,7 +26,8 @@ export const ipGeoConnector: Connector = {
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
     if (!IPV4_RE.test(query.value)) return [];
 
-    const res = await fetchJson<IpApiResponse>(`https://ipapi.co/${query.value}/json/`, { signal: ctx.signal });
+    const url = `https://ipapi.co/${query.value}/json/`;
+    const res = await fetchJson<IpApiResponse>(url, { signal: ctx.signal });
     if (!res || res.error || !res.city) return [];
 
     return [
@@ -41,6 +42,8 @@ export const ipGeoConnector: Connector = {
         confidence: 'likely',
         query,
         timestamp: Date.now(),
+        raw: res,
+        rawSourceUrl: redactUrl(url),
         data: {
           city: res.city,
           region: res.region ?? undefined,

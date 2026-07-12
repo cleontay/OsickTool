@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 
 interface GhCommit {
   sha: string;
@@ -34,10 +34,11 @@ export const githubCommitsConnector: Connector = {
   description: 'Harvests real name/email pairs from public commit authorship in recent GitHub activity.',
   supports: ['username', 'social'],
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
-    const events = await fetchJson<GhEvent[]>(
-      `https://api.github.com/users/${encodeURIComponent(query.value)}/events/public?per_page=100`,
-      { signal: ctx.signal, headers: { Accept: 'application/vnd.github+json' } },
-    );
+    const url = `https://api.github.com/users/${encodeURIComponent(query.value)}/events/public?per_page=100`;
+    const events = await fetchJson<GhEvent[]>(url, {
+      signal: ctx.signal,
+      headers: { Accept: 'application/vnd.github+json' },
+    });
     if (!events || events.length === 0) return [];
 
     const identities = new Map<string, HarvestedIdentity>();
@@ -84,6 +85,8 @@ export const githubCommitsConnector: Connector = {
         confidence: 'confirmed' as const,
         query,
         timestamp: Date.now(),
+        raw: events,
+        rawSourceUrl: redactUrl(url),
         data: {
           name: identity.name,
           email: identity.email,

@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 
 interface KeybaseResponse {
   status: { code: number; name: string };
@@ -19,10 +19,8 @@ export const keybaseConnector: Connector = {
   description: 'Keybase identity + linked/proven social accounts (a great pivot source).',
   supports: ['username', 'social'],
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
-    const res = await fetchJson<KeybaseResponse>(
-      `https://keybase.io/_/api/1.0/user/lookup.json?username=${encodeURIComponent(query.value)}&fields=basics,profile,proofs_summary`,
-      { signal: ctx.signal },
-    );
+    const url = `https://keybase.io/_/api/1.0/user/lookup.json?username=${encodeURIComponent(query.value)}&fields=basics,profile,proofs_summary`;
+    const res = await fetchJson<KeybaseResponse>(url, { signal: ctx.signal });
     const them = res?.them?.[0];
     if (!them) return [];
 
@@ -39,6 +37,8 @@ export const keybaseConnector: Connector = {
         confidence: 'confirmed',
         query,
         timestamp: Date.now(),
+        raw: res,
+        rawSourceUrl: redactUrl(url),
         data: {
           fullName: them.profile?.full_name ?? undefined,
           location: them.profile?.location ?? undefined,
@@ -60,6 +60,8 @@ export const keybaseConnector: Connector = {
         confidence: 'confirmed',
         query,
         timestamp: Date.now(),
+        raw: res,
+        rawSourceUrl: redactUrl(url),
         data: { proofType: p.proof_type, nametag: p.nametag },
       });
     }

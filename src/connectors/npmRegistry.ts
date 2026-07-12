@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 
 interface NpmSearchResult {
   objects: Array<{
@@ -21,10 +21,8 @@ export const npmConnector: Connector = {
   description: 'Packages published or maintained by this username on npm.',
   supports: ['username', 'social'],
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
-    const data = await fetchJson<NpmSearchResult>(
-      `https://registry.npmjs.org/-/v1/search?text=maintainer:${encodeURIComponent(query.value)}&size=10`,
-      { signal: ctx.signal },
-    );
+    const url = `https://registry.npmjs.org/-/v1/search?text=maintainer:${encodeURIComponent(query.value)}&size=10`;
+    const data = await fetchJson<NpmSearchResult>(url, { signal: ctx.signal });
     if (!data || !data.objects || data.objects.length === 0) return [];
 
     const packages = data.objects.map((o) => o.package.name);
@@ -46,6 +44,8 @@ export const npmConnector: Connector = {
         confidence: 'confirmed',
         query,
         timestamp: Date.now(),
+        raw: data,
+        rawSourceUrl: redactUrl(url),
         data: {
           packageCount: data.total,
           packages: packages.slice(0, 20).join(', '),
