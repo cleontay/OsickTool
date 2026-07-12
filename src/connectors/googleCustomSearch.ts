@@ -1,6 +1,15 @@
-import type { Connector, Finding, SearchQuery } from '../types';
+import type { Connector, Finding, QueryType, SearchQuery } from '../types';
 import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 import { buildDorkQueries } from '../lib/googleDork';
+import { looksLikeEmail, looksLikePhoneShape, looksLikeIc } from '../lib/classify';
+
+// Only checked for types with a genuinely fixed shape - 'general' and
+// 'dork' are intentionally free-form (domain, IP, name, or raw syntax).
+const SHAPE_CHECKS: Partial<Record<QueryType, (value: string) => boolean>> = {
+  email: looksLikeEmail,
+  phone: looksLikePhoneShape,
+  ic: looksLikeIc,
+};
 
 interface CseItem {
   title: string;
@@ -32,6 +41,8 @@ export const googleCustomSearchConnector: Connector = {
     const apiKey = ctx.apiKeys.googleCseKey;
     const cx = ctx.apiKeys.googleCseId;
     if (!apiKey || !cx) return [];
+    const shapeCheck = SHAPE_CHECKS[query.type];
+    if (shapeCheck && !shapeCheck(query.value)) return [];
 
     const [topDork] = buildDorkQueries(query.type, query.value);
     if (!topDork) return [];

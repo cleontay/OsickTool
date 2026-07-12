@@ -5,6 +5,8 @@ import { extractPivots } from './lib/pivot';
 import { getApiKeys, getProxyEnabled } from './lib/apiKeys';
 import { queryKey } from './lib/queryKey';
 import { getAutoEnrichEnabled, getMaxDepth, getMaxAutoSearches } from './lib/enrichmentPrefs';
+import { looksLikePersonName } from './lib/classify';
+import { generateUsernamePermutations } from './lib/namePermutations';
 
 export interface SearchRunLog {
   query: SearchQuery;
@@ -94,6 +96,18 @@ class Store {
     if (this.state.searchedValues.has(queryKey(normalized.type, normalized.value, normalized.country))) return;
 
     await this.runBatch(normalized, 0, false);
+
+    // A person's name has no dedicated "search by name" connector, but
+    // common handle patterns are worth trying directly - generated
+    // properly (see namePermutations.ts) rather than naively splitting on
+    // whitespace or truncating the string.
+    if (normalized.type === 'general' && looksLikePersonName(normalized.value)) {
+      for (const handle of generateUsernamePermutations(normalized.value)) {
+        this.seedPivot({ value: handle, type: 'username', origin: 'Name permutation' }, 1);
+      }
+      this.emit();
+    }
+
     void this.drainAutoQueue();
   }
 
@@ -113,8 +127,6 @@ class Store {
       proxyEnabled: getProxyEnabled(),
     };
 
-    const autoEnrichEnabled = getAutoEnrichEnabled();
-    const maxDepth = getMaxDepth();
     const connectors = connectorsFor(query.type);
 
     await Promise.all(
@@ -126,17 +138,7 @@ class Store {
             this.state.findings.push(...results);
             this.state.runLog.push({ query, connectorName: connector.name, count: results.length });
 
-            const newPivots = results.flatMap(extractPivots);
-            for (const p of newPivots) {
-              const pKey = queryKey(p.type, p.value, p.country);
-              if (this.state.searchedValues.has(pKey)) continue;
-              if (this.state.pivots.some((existing) => queryKey(existing.type, existing.value, existing.country) === pKey)) continue;
-
-              this.state.pivots.push(p);
-              if (autoEnrichEnabled && depth + 1 <= maxDepth) {
-                this.state.autoQueue.push({ query: { type: p.type, value: p.value, country: p.country }, depth: depth + 1 });
-              }
-            }
+            for (const p of results.flatMap(extractPivots)) this.seedPivot(p, depth + 1);
             this.emit();
           }
           return results;
@@ -147,6 +149,22 @@ class Store {
     this.activeOperations--;
     this.updateSearchingFlag();
     this.emit();
+  }
+
+  /** Records a new candidate (a discovered pivot, or a generated name
+   * permutation) as a manually-clickable lead, and additionally queues it
+   * for automatic pursuit if auto-enrich is on and it's within the
+   * configured depth. Does not emit - callers batch several of these
+   * together and emit once. */
+  private seedPivot(p: PivotCandidate, depth: number): void {
+    const pKey = queryKey(p.type, p.value, p.country);
+    if (this.state.searchedValues.has(pKey)) return;
+    if (this.state.pivots.some((existing) => queryKey(existing.type, existing.value, existing.country) === pKey)) return;
+
+    this.state.pivots.push(p);
+    if (getAutoEnrichEnabled() && depth <= getMaxDepth()) {
+      this.state.autoQueue.push({ query: { type: p.type, value: p.value, country: p.country }, depth });
+    }
   }
 
   /** Serially works through the auto-enrichment queue - one search at a

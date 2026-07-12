@@ -1,5 +1,6 @@
 import type { Connector, Finding, SearchQuery } from '../types';
 import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
+import { looksLikeEmail } from '../lib/classify';
 
 interface HunterVerifyResponse {
   data?: {
@@ -23,6 +24,9 @@ export const hunterConnector: Connector = {
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
     const apiKey = ctx.apiKeys.hunter;
     if (!apiKey) return [];
+    // Don't spend a metered Hunter.io request on something that isn't even
+    // shaped like an email address.
+    if (!looksLikeEmail(query.value)) return [];
 
     const url = `https://api.hunter.io/v2/email-verifier?email=${encodeURIComponent(query.value)}&api_key=${encodeURIComponent(apiKey)}`;
     const res = await fetchJson<HunterVerifyResponse>(url, { signal: ctx.signal });

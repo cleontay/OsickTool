@@ -1,6 +1,7 @@
 import type { Connector, Finding, SearchQuery } from '../types';
 import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 import { md5 } from '../lib/md5';
+import { looksLikeEmail } from '../lib/classify';
 
 interface GravatarProfile {
   entry?: Array<{
@@ -43,6 +44,7 @@ export const gravatarConnector: Connector = {
   description: 'Checks for a registered Gravatar avatar/profile for this email address.',
   supports: ['email'],
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
+    if (!looksLikeEmail(query.value)) return [];
     const hash = md5(query.value.trim().toLowerCase());
     const profileUrl = `https://www.gravatar.com/${hash}.json`;
     const [hasAvatar, profile] = await Promise.all([

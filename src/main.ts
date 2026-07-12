@@ -8,16 +8,18 @@ import { downloadRawJson } from './lib/rawExport';
 import { getCountryOptions, getRecentCountry, setRecentCountry, guessCountryFromLocale } from './lib/countries';
 import { buildIdentitySummary } from './lib/identitySummary';
 import { getAutoEnrichEnabled, setAutoEnrichEnabled, getMaxDepth, getMaxAutoSearches } from './lib/enrichmentPrefs';
+import { classifyQuery } from './lib/classify';
 
-const QUERY_TYPES: Array<{ id: QueryType; label: string; placeholder: string }> = [
-  { id: 'username', label: 'Username', placeholder: 'e.g. torvalds' },
-  { id: 'email', label: 'Email address', placeholder: 'e.g. name@example.com' },
-  { id: 'phone', label: 'Phone number', placeholder: 'e.g. 555 123 4567 (pick a country)' },
-  { id: 'ic', label: 'IC / National ID', placeholder: 'e.g. 900101-14-5678' },
-  { id: 'social', label: 'Social media handle', placeholder: 'e.g. @handle' },
-  { id: 'general', label: 'General / domain / IP', placeholder: 'e.g. example.com or 8.8.8.8' },
-  { id: 'dork', label: 'Google Dork (custom query)', placeholder: 'e.g. site:example.com filetype:pdf "confidential"' },
-];
+const QUERY_TYPE_LABELS: Record<QueryType, string> = {
+  username: 'Username',
+  email: 'Email address',
+  phone: 'Phone number',
+  ic: 'IC / National ID',
+  social: 'Social media handle',
+  general: 'General / domain / IP / name',
+  dork: 'Google Dork (custom query)',
+};
+const QUERY_TYPE_ORDER: QueryType[] = ['general', 'username', 'email', 'phone', 'ic', 'social', 'dork'];
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'identity', label: 'Identity' },
@@ -54,9 +56,14 @@ app.innerHTML = `
 
   <section class="search-panel panel">
     <form id="search-form" class="search-row">
-      <select id="query-type"></select>
+      <input
+        type="text"
+        id="query-value"
+        placeholder="Search a username, email, phone number, IC/NRIC, domain, name, or Google dork…"
+        autocomplete="off"
+      />
+      <select id="query-type" class="type-badge" title="Auto-detected category - change if it guessed wrong"></select>
       <select id="query-country" class="hidden"></select>
-      <input type="text" id="query-value" placeholder="" autocomplete="off" />
       <button type="submit" class="primary">Search</button>
     </form>
     <div class="search-hint" id="search-hint"></div>
@@ -112,10 +119,10 @@ const stopBtn = document.getElementById('btn-stop') as HTMLButtonElement;
 autoEnrichCheckbox.checked = getAutoEnrichEnabled();
 autoEnrichCheckbox.addEventListener('change', () => setAutoEnrichEnabled(autoEnrichCheckbox.checked));
 
-for (const t of QUERY_TYPES) {
+for (const id of QUERY_TYPE_ORDER) {
   const opt = document.createElement('option');
-  opt.value = t.id;
-  opt.textContent = t.label;
+  opt.value = id;
+  opt.textContent = QUERY_TYPE_LABELS[id];
   typeSelect.appendChild(opt);
 }
 
@@ -135,18 +142,42 @@ for (const c of getCountryOptions()) {
 countrySelect.value = getRecentCountry() ?? guessCountryFromLocale() ?? '';
 if (!countrySelect.value) countrySelect.value = '';
 
-function updatePlaceholder(): void {
-  const t = QUERY_TYPES.find((q) => q.id === typeSelect.value)!;
-  valueInput.placeholder = t.placeholder;
-  searchHint.textContent = `Searching as: ${t.label}. Results are consolidated into the tabs below as they arrive.`;
+// The type selector auto-follows live classification of whatever's typed,
+// until the user manually touches it - then their choice sticks until the
+// box is cleared or a search is submitted, so one search's manual pick
+// never silently carries over to the next.
+let typeManuallySet = false;
 
-  const isPhone = t.id === 'phone';
+function updateDerivedUI(): void {
+  const type = typeSelect.value as QueryType;
+  const value = valueInput.value;
+  const isPhone = type === 'phone';
   countrySelect.classList.toggle('hidden', !isPhone);
   countrySelect.required = isPhone;
   countrySelect.disabled = !isPhone;
+
+  if (!value.trim()) {
+    searchHint.textContent =
+      'Type anything - the category (username, email, phone, IC/NRIC, domain, name, or a raw Google dork) is detected automatically. Wrong guess? Use the dropdown to correct it.';
+    return;
+  }
+  const detected = classifyQuery(value);
+  searchHint.textContent = typeManuallySet
+    ? `Searching as: ${QUERY_TYPE_LABELS[type]} (manually set).`
+    : `Detected: ${QUERY_TYPE_LABELS[type]} — ${detected.reason}.`;
 }
-typeSelect.addEventListener('change', updatePlaceholder);
-updatePlaceholder();
+
+function classifyAndUpdate(): void {
+  if (!typeManuallySet) typeSelect.value = classifyQuery(valueInput.value).type;
+  updateDerivedUI();
+}
+
+valueInput.addEventListener('input', classifyAndUpdate);
+typeSelect.addEventListener('change', () => {
+  typeManuallySet = true;
+  updateDerivedUI();
+});
+classifyAndUpdate();
 
 searchForm.addEventListener('submit', (e) => {
   e.preventDefault();
@@ -164,6 +195,8 @@ searchForm.addEventListener('submit', (e) => {
 
   store.search({ type, value, country });
   valueInput.value = '';
+  typeManuallySet = false;
+  classifyAndUpdate();
 });
 
 document.getElementById('btn-settings')?.addEventListener('click', openSettingsModal);

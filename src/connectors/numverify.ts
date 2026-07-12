@@ -1,6 +1,7 @@
 import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js';
 import type { Connector, Finding, SearchQuery } from '../types';
 import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
+import { looksLikePhoneShape } from '../lib/classify';
 
 interface NumverifyResponse {
   valid: boolean;
@@ -24,6 +25,9 @@ export const numverifyConnector: Connector = {
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
     const apiKey = ctx.apiKeys.numverify;
     if (!apiKey) return [];
+    // Text containing letters can never be a phone number - don't spend a
+    // metered NumVerify request confirming what a regex already rules out.
+    if (!looksLikePhoneShape(query.value)) return [];
 
     // NumVerify accepts local-format numbers but is far more reliable given a
     // full E.164 number, so normalize using the selected country hint first.

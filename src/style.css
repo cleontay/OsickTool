@@ -148,6 +148,16 @@ button.small { padding: 5px 10px; font-size: 12px; }
   min-width: 150px;
 }
 
+.search-row select.type-badge {
+  min-width: 0;
+  width: 180px;
+  flex-shrink: 0;
+  background: var(--primary-bg);
+  border-color: #bfdbfe;
+  color: var(--primary-dark);
+  font-weight: 500;
+}
+
 .search-row input[type="text"] {
   flex: 1;
   border-radius: 8px;
@@ -587,7 +597,8 @@ button.small { padding: 5px 10px; font-size: 12px; }
     align-items: stretch;
   }
   .search-row select,
-  .search-row input[type="text"] {
+  .search-row input[type="text"],
+  .search-row select.type-badge {
     width: 100%;
     min-width: 0;
   }

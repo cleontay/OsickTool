@@ -7,13 +7,15 @@ as a PWA.
 
 ## What it does
 
-1. Pick a search type — **username, email, phone number, IC/national ID, social
-   media handle, general** (domain/IP/keyword), **or a raw Google Dork query** —
-   and enter a value. Phone searches also ask for a country, so local-format
-   numbers resolve correctly.
-2. OsickTool fans the query out to every free/public source that supports that type
-   and consolidates results into tabs: **Identity, Accounts, Email, Phone,
-   Web & Infrastructure, General**.
+1. There's just **one search box** - type a username, email, phone number,
+   IC/national ID, domain/IP, a person's name, or a raw Google Dork query, and
+   OsickTool detects which one it is as you type (see [Auto-detected search](#auto-detected-search)).
+   A small badge shows the detected category and doubles as a manual override
+   if it guesses wrong; a country selector appears automatically once it
+   detects a phone number.
+2. OsickTool fans the query out to every free/public source that supports that
+   detected type and consolidates results into tabs: **Identity, Accounts,
+   Email, Phone, Web & Infrastructure, General**.
 3. **Auto-enrich** (on by default, toggle next to the search bar) means you don't
    have to drive this by hand: every new email, username, phone number, or name a
    result turns up is automatically searched too, and whatever *that* turns up
@@ -39,6 +41,32 @@ as a PWA.
 Nothing persists between sessions unless you export it yourself. Reloading the page
 wipes all findings. The layout is responsive (desktop and mobile) and installable
 as a PWA.
+
+## Auto-detected search
+
+One box, no manual category picker. `src/lib/classify.ts` runs a priority-ordered
+set of shape checks against whatever you type - Google dork syntax, then email,
+then a national-ID pattern (with a calendar-date plausibility check, so a valid
+MyKad number doesn't get misread as a phone number), then a phone-number shape
+(digits/spaces/`+`/`-`/`()` only - **text containing letters is never treated as
+a phone number**, so metered APIs like NumVerify never get an obviously-wrong
+request), then a domain/IPv4 shape, then a bare handle, falling through to a
+general keyword/name search if nothing more specific matched. The detected
+category shows as a small badge next to the input, live-updated as you type;
+change it manually if it guessed wrong and your choice sticks until you clear
+the box or search again.
+
+This same shape-checking is duplicated as a direct guard inside the connectors
+that cost real, metered quota (NumVerify, Hunter.io, Google Custom Search) -
+even if a pivot or a manual override ever hands one of them a wrong-shaped
+value, the connector itself refuses to spend a request on it.
+
+When the detected category is a person's name (two to four capitalized words),
+OsickTool doesn't search it word-by-word or truncate it - it searches the full
+name as typed, *and* generates the common handle patterns real people actually
+use (`johndoe`, `john.doe`, `j.doe`, `jdoe`, `doejohn`, ...) via
+`src/lib/namePermutations.ts`, feeding them into the same auto-enrichment queue
+as any other discovered lead.
 
 ## Auto-enrichment
 
