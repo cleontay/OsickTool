@@ -8,8 +8,9 @@ as a PWA.
 ## What it does
 
 1. Pick a search type — **username, email, phone number, IC/national ID, social
-   media handle,** or **general** (domain/IP/keyword) — and enter a value. Phone
-   searches also ask for a country, so local-format numbers resolve correctly.
+   media handle, general** (domain/IP/keyword), **or a raw Google Dork query** —
+   and enter a value. Phone searches also ask for a country, so local-format
+   numbers resolve correctly.
 2. OsickTool fans the query out to every free/public source that supports that type
    and consolidates results into tabs: **Identity, Accounts, Email, Phone,
    Web & Infrastructure, General**.
@@ -63,6 +64,40 @@ findings already collected are kept, nothing is lost.
 Turn it off entirely with the checkbox next to the search bar (or in Settings)
 to go back to click-to-pivot behavior.
 
+## Google Dorking
+
+Every search - whatever type it is - also populates a **Google Dorks** tab with a
+handful of curated dork queries tailored to what you searched (exact-phrase
+matches, `site:`/`filetype:` scoping, common leak-hosting sites, exposed
+directory listings for a domain, and so on). Pick **Google Dork** as the search
+type to type a fully custom dork instead (e.g.
+`site:example.com filetype:sql "password"`).
+
+This works in two tiers, because **Google Search has no free, CORS-enabled API**
+- there's no honest way for a static client-only app to fetch and parse Google
+results without a backend, so this doesn't pretend to:
+
+- **Link-only (always on, no setup)** - each dork becomes a one-click "open in
+  Google" link. Nothing is fetched on your behalf; it's exactly as if you'd
+  typed the query into Google yourself.
+- **Live ranked results (optional)** - with a free Google Custom Search API key
+  and Search Engine ID in Settings, the single most useful dork per search also
+  runs for real through [Google's official Custom Search JSON
+  API](https://developers.google.com/custom-search/v1/introduction) and comes
+  back as real title/snippet/link results (free tier: 100 queries/day). To set
+  it up:
+  1. Create a [Programmable Search Engine](https://programmablesearchengine.google.com/controlpanel/create),
+     turn on **"Search the entire web"**, and copy its **Search engine ID**.
+  2. Get an API key from the [Custom Search API
+     page](https://developers.google.com/custom-search/v1/introduction) (via
+     Google Cloud Console).
+  3. Paste both into Settings.
+
+  Only the top dork runs automatically (to stay well within the free daily
+  quota) - the rest of the generated dorks stay available as links. Real
+  snippets feed the same pivot/auto-enrichment engine as everything else, so a
+  name or email in a live result can trigger further searches.
+
 ## Sources
 
 | Source | Query types | Notes |
@@ -87,6 +122,8 @@ to go back to click-to-pivot behavior.
 | Phone number analysis | phone | Local: `libphonenumber-js` parsing/validation against the country you select |
 | IC/NRIC decoder | ic | Local: Malaysia MyKad + Singapore NRIC/FIN decoding & checksum |
 | Site Directory | username, social | Generates candidate profile links across 45+ popular platforms that don't expose a public API (Instagram, X, TikTok, LinkedIn, etc.) — unverified by default |
+| **Google Dork (links)** | all types | Curated Google dork queries as one-click links - no request is ever made on your behalf |
+| **Google Custom Search** | all types | Optional — real ranked Google results for the top dork query; needs a free API key + Search Engine ID in Settings |
 | NumVerify, Hunter.io, Shodan (full) | phone, email, general | Optional — bring your own free-tier API key in Settings |
 | **Consolidated Profile** | (all) | Not a source - synthesizes name/email/phone/username/location/organization/birth-date fields already returned by the sources above into one cross-referenced identity card, with age estimated from a decoded birth date |
 
@@ -98,9 +135,10 @@ URL patterns, not confirmed matches — always open the link and check manually.
 ### Optional API keys
 
 Settings lets you paste your own free-tier API key for NumVerify (phone carrier
-lookup), Hunter.io (email verification), or Shodan (host intelligence). Keys are
-stored only in `localStorage` in your browser, are sent only directly to that
-provider, and are never included in exported reports. Have I Been Pwned is
+lookup), Hunter.io (email verification), Shodan (host intelligence), or Google
+Custom Search (real dork results - see [Google Dorking](#google-dorking) above).
+Keys are stored only in `localStorage` in your browser, are sent only directly to
+that provider, and are never included in exported reports. Have I Been Pwned is
 intentionally not offered — its API blocks unauthenticated browser requests by
 design, so it can't work from a static client-only app.
 
@@ -146,7 +184,10 @@ OsickTool only surfaces information its underlying sources already publish
 openly. It's intended for legitimate research, due diligence, and authorized
 security work. Respect each source's terms of service and the privacy laws that
 apply in your jurisdiction (e.g. GDPR). Treat "unverified" results as leads to
-confirm, not facts.
+confirm, not facts. The Google Dork queries are standard, widely-documented OSINT
+recon patterns (the same techniques search engines themselves index and anyone
+can type manually) - they only ever surface what's already publicly indexed,
+never anything requiring unauthorized access.
 
 ## Extending
 

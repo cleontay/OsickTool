@@ -21,6 +21,8 @@ import { icDecoderConnector } from './icDecoders';
 import { githubCommitsConnector } from './githubCommits';
 import { ipGeoConnector } from './ipGeo';
 import { rdapConnector } from './rdap';
+import { googleDorkLinksConnector } from './googleDorkLinks';
+import { googleCustomSearchConnector } from './googleCustomSearch';
 
 export const CONNECTORS: Connector[] = [
   // Identity
@@ -53,6 +55,9 @@ export const CONNECTORS: Connector[] = [
   shodanConnector,
   ipGeoConnector,
   rdapConnector,
+  // Google dorking
+  googleDorkLinksConnector,
+  googleCustomSearchConnector,
 ];
 
 export function connectorsFor(type: Connector['supports'][number]): Connector[] {

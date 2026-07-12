@@ -4,7 +4,8 @@ export type QueryType =
   | 'phone'
   | 'ic'
   | 'social'
-  | 'general';
+  | 'general'
+  | 'dork';
 
 export interface SearchQuery {
   type: QueryType;
@@ -20,6 +21,7 @@ export type TabId =
   | 'phone'
   | 'web'
   | 'other'
+  | 'dorks'
   | 'pivots';
 
 export interface TabDef {

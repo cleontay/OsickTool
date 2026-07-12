@@ -9,6 +9,7 @@ const TAB_LABELS: Record<TabId, string> = {
   phone: 'Phone Intelligence',
   web: 'Web & Infrastructure',
   other: 'General / Other',
+  dorks: 'Google Dorks',
   pivots: 'Pivot Suggestions',
 };
 
@@ -44,7 +45,7 @@ export function buildReportPdf(findings: Finding[], targetLabel: string): jsPDF 
     byTab.get(f.tab)!.push(f);
   }
 
-  const order: TabId[] = ['identity', 'accounts', 'email', 'phone', 'web', 'other'];
+  const order: TabId[] = ['identity', 'accounts', 'email', 'phone', 'web', 'other', 'dorks'];
   for (const tabId of order) {
     const items = byTab.get(tabId);
     if (!items || items.length === 0) continue;
@@ -103,5 +104,6 @@ export const TAB_DEFS: TabDef[] = [
   { id: 'phone', label: 'Phone' },
   { id: 'web', label: 'Web & Infrastructure' },
   { id: 'other', label: 'General' },
+  { id: 'dorks', label: 'Google Dorks' },
   { id: 'pivots', label: 'Pivots' },
 ];
