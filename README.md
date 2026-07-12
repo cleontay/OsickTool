@@ -28,8 +28,13 @@ as a PWA.
    birth date when one's available).
 5. Anything auto-enrich didn't get to - because it's off, or the chain hit its
    depth/budget limit - is still listed in the **Pivots** tab to search manually.
-6. Export everything collected so far - including the consolidated profile - as
-   a **PDF report** or a **CSV**, at any time.
+6. Every finding that came from a network call has a **View raw API response**
+   toggle - the exact JSON that source returned, not just the fields OsickTool
+   chose to surface, so you can judge the underlying data yourself. See [Raw
+   responses](#raw-responses) below.
+7. Export everything collected so far - including the consolidated profile - as
+   a **PDF report**, a **CSV**, or the full **raw JSON** of every API response,
+   at any time.
 
 Nothing persists between sessions unless you export it yourself. Reloading the page
 wipes all findings. The layout is responsive (desktop and mobile) and installable
@@ -97,6 +102,26 @@ results without a backend, so this doesn't pretend to:
   quota) - the rest of the generated dorks stay available as links. Real
   snippets feed the same pivot/auto-enrichment engine as everything else, so a
   name or email in a live result can trigger further searches.
+
+## Raw responses
+
+Every finding card that came from a network call has a **View raw API
+response** toggle at the bottom - the exact JSON the source returned, exactly
+as it came back, not just the handful of fields OsickTool chose to summarize
+into the card above it. Alongside it is the endpoint that was queried (with
+any API key redacted) and a **Copy JSON** button.
+
+This is deliberately per-finding rather than a single combined log: several
+findings can come from one API call (e.g. Keybase's proven-account findings
+all share one profile lookup), and each shows that same response so you can
+always see exactly what backs a given card. Findings from local-only
+connectors (IC decoder, phone parser, email format analysis) don't have one,
+since no network call produced them - there's nothing to show.
+
+For pulling everything at once, **Export Raw JSON** (next to Export CSV/PDF)
+downloads every raw response collected so far as a single JSON file, each
+entry tagged with which connector and query produced it - useful for feeding
+into your own tooling or just reviewing offline.
 
 ## Sources
 

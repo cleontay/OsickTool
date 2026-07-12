@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 
 interface ChessComPlayer {
   username: string;
@@ -20,10 +20,8 @@ export const chessComConnector: Connector = {
   description: 'Public Chess.com player profile.',
   supports: ['username'],
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
-    const player = await fetchJson<ChessComPlayer>(
-      `https://api.chess.com/pub/player/${encodeURIComponent(query.value.toLowerCase())}`,
-      { signal: ctx.signal },
-    );
+    const url = `https://api.chess.com/pub/player/${encodeURIComponent(query.value.toLowerCase())}`;
+    const player = await fetchJson<ChessComPlayer>(url, { signal: ctx.signal });
     if (!player || !player.username) return [];
 
     return [
@@ -38,6 +36,8 @@ export const chessComConnector: Connector = {
         confidence: 'confirmed',
         query,
         timestamp: Date.now(),
+        raw: player,
+        rawSourceUrl: redactUrl(url),
         data: {
           country: player.country?.split('/').pop() ?? undefined,
           followers: player.followers,
@@ -66,10 +66,8 @@ export const lichessConnector: Connector = {
   description: 'Public Lichess player profile.',
   supports: ['username'],
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
-    const player = await fetchJson<LichessPlayer>(
-      `https://lichess.org/api/user/${encodeURIComponent(query.value)}`,
-      { signal: ctx.signal },
-    );
+    const url = `https://lichess.org/api/user/${encodeURIComponent(query.value)}`;
+    const player = await fetchJson<LichessPlayer>(url, { signal: ctx.signal });
     if (!player || !player.username) return [];
 
     const name = [player.profile?.firstName, player.profile?.lastName].filter(Boolean).join(' ');
@@ -85,6 +83,8 @@ export const lichessConnector: Connector = {
         confidence: 'confirmed',
         query,
         timestamp: Date.now(),
+        raw: player,
+        rawSourceUrl: redactUrl(url),
         data: {
           country: player.profile?.country ?? undefined,
           location: player.profile?.location ?? undefined,
@@ -119,10 +119,8 @@ export const codeforcesConnector: Connector = {
   description: 'Public Codeforces competitive-programming profile.',
   supports: ['username'],
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
-    const res = await fetchJson<CodeforcesResponse>(
-      `https://codeforces.com/api/user.info?handles=${encodeURIComponent(query.value)}`,
-      { signal: ctx.signal },
-    );
+    const url = `https://codeforces.com/api/user.info?handles=${encodeURIComponent(query.value)}`;
+    const res = await fetchJson<CodeforcesResponse>(url, { signal: ctx.signal });
     const user = res?.status === 'OK' ? res.result?.[0] : undefined;
     if (!user) return [];
 
@@ -139,6 +137,8 @@ export const codeforcesConnector: Connector = {
         confidence: 'confirmed',
         query,
         timestamp: Date.now(),
+        raw: res,
+        rawSourceUrl: redactUrl(url),
         data: {
           country: user.country ?? undefined,
           city: user.city ?? undefined,

@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 
 interface GhUser {
   login: string;
@@ -25,10 +25,11 @@ export const githubConnector: Connector = {
   description: 'Public GitHub profile via the GitHub REST API.',
   supports: ['username', 'social'],
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
-    const user = await fetchJson<GhUser>(
-      `https://api.github.com/users/${encodeURIComponent(query.value)}`,
-      { signal: ctx.signal, headers: { Accept: 'application/vnd.github+json' } },
-    );
+    const url = `https://api.github.com/users/${encodeURIComponent(query.value)}`;
+    const user = await fetchJson<GhUser>(url, {
+      signal: ctx.signal,
+      headers: { Accept: 'application/vnd.github+json' },
+    });
     if (!user || !user.login) return [];
 
     return [
@@ -43,6 +44,8 @@ export const githubConnector: Connector = {
         confidence: 'confirmed',
         query,
         timestamp: Date.now(),
+        raw: user,
+        rawSourceUrl: redactUrl(url),
         data: {
           name: user.name ?? undefined,
           company: user.company ?? undefined,

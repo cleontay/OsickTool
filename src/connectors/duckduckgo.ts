@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 
 interface DdgTopic {
   Text?: string;
@@ -23,11 +23,10 @@ export const duckduckgoConnector: Connector = {
   description: 'DuckDuckGo Instant Answer API - general-purpose lookups for names, brands, and topics.',
   supports: ['general', 'social', 'username'],
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
-    const res = await fetchJson<DdgResponse>(
-      `https://api.duckduckgo.com/?q=${encodeURIComponent(query.value)}&format=json&no_html=1&skip_disambig=1`,
-      { signal: ctx.signal },
-    );
+    const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query.value)}&format=json&no_html=1&skip_disambig=1`;
+    const res = await fetchJson<DdgResponse>(url, { signal: ctx.signal });
     if (!res) return [];
+    const rawSourceUrl = redactUrl(url);
 
     const findings: Finding[] = [];
     if (res.AbstractText) {
@@ -42,6 +41,8 @@ export const duckduckgoConnector: Connector = {
         confidence: 'info',
         query,
         timestamp: Date.now(),
+        raw: res,
+        rawSourceUrl,
         data: { source: res.AbstractSource },
       });
     }
@@ -56,6 +57,8 @@ export const duckduckgoConnector: Connector = {
         confidence: 'info',
         query,
         timestamp: Date.now(),
+        raw: res,
+        rawSourceUrl,
       });
     }
     const related = (res.RelatedTopics ?? []).flatMap((t) => (t.Topics ? t.Topics : [t])).slice(0, 8);
@@ -72,6 +75,8 @@ export const duckduckgoConnector: Connector = {
         confidence: 'info',
         query,
         timestamp: Date.now(),
+        raw: res,
+        rawSourceUrl,
       });
     }
 

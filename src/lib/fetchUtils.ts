@@ -48,3 +48,20 @@ export function nextId(): string {
   idCounter += 1;
   return `f${Date.now().toString(36)}${idCounter}`;
 }
+
+const SECRET_PARAM_NAMES = ['key', 'api_key', 'access_key', 'apikey', 'token'];
+
+/** Strips API key/token query params before a URL is shown in the UI or
+ * included in a raw-response export - the response body itself never
+ * contains the caller's key, but the request URL does. */
+export function redactUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    for (const name of SECRET_PARAM_NAMES) {
+      if (parsed.searchParams.has(name)) parsed.searchParams.set(name, 'REDACTED');
+    }
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}

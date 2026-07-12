@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 import { buildDorkQueries } from '../lib/googleDork';
 
 interface CseItem {
@@ -36,11 +36,10 @@ export const googleCustomSearchConnector: Connector = {
     const [topDork] = buildDorkQueries(query.type, query.value);
     if (!topDork) return [];
 
-    const res = await fetchJson<CseResponse>(
-      `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(apiKey)}&cx=${encodeURIComponent(cx)}&q=${encodeURIComponent(topDork.query)}&num=10`,
-      { signal: ctx.signal, timeoutMs: 10000 },
-    );
+    const url = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(apiKey)}&cx=${encodeURIComponent(cx)}&q=${encodeURIComponent(topDork.query)}&num=10`;
+    const res = await fetchJson<CseResponse>(url, { signal: ctx.signal, timeoutMs: 10000 });
     if (!res?.items?.length) return [];
+    const rawSourceUrl = redactUrl(url);
 
     return res.items.map((item) => ({
       id: nextId(),
@@ -53,6 +52,8 @@ export const googleCustomSearchConnector: Connector = {
       confidence: 'confirmed' as const,
       query,
       timestamp: Date.now(),
+      raw: res,
+      rawSourceUrl,
       data: { source: item.displayLink, dork: topDork.query },
     }));
   },

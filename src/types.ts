@@ -43,6 +43,14 @@ export interface Finding {
   confidence: Confidence;
   query: SearchQuery;
   timestamp: number;
+  /** The parsed API response this finding was derived from, if it came from
+   * a network call - lets you inspect exactly what a source returned rather
+   * than just the fields OsickTool chose to surface. Absent for local-only
+   * connectors (IC decoder, phone parser, etc.) that never call an API. */
+  raw?: unknown;
+  /** The endpoint that was queried, with any API key/token query params
+   * redacted - shown alongside the raw response for context. */
+  rawSourceUrl?: string;
 }
 
 export interface ConnectorContext {

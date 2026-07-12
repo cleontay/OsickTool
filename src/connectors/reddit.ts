@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 
 interface RedditAboutResponse {
   data?: {
@@ -21,10 +21,8 @@ export const redditConnector: Connector = {
   description: 'Public Reddit profile (best-effort, Reddit may block unauthenticated cross-origin reads).',
   supports: ['username', 'social'],
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
-    const res = await fetchJson<RedditAboutResponse>(
-      `https://www.reddit.com/user/${encodeURIComponent(query.value)}/about.json`,
-      { signal: ctx.signal },
-    );
+    const url = `https://www.reddit.com/user/${encodeURIComponent(query.value)}/about.json`;
+    const res = await fetchJson<RedditAboutResponse>(url, { signal: ctx.signal });
     const d = res?.data;
     if (!d || !d.name) return [];
 
@@ -40,6 +38,8 @@ export const redditConnector: Connector = {
         confidence: 'confirmed',
         query,
         timestamp: Date.now(),
+        raw: res,
+        rawSourceUrl: redactUrl(url),
         data: {
           totalKarma: d.total_karma,
           linkKarma: d.link_karma,

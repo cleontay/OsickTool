@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 
 interface WikiSearchResponse {
   query?: {
@@ -16,12 +16,10 @@ export const wikipediaConnector: Connector = {
   description: 'Full-text search across Wikipedia articles for the query.',
   supports: ['general', 'social', 'username'],
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
-    const res = await fetchJson<WikiSearchResponse>(
-      `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
-        query.value,
-      )}&format=json&origin=*&srlimit=5`,
-      { signal: ctx.signal },
-    );
+    const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
+      query.value,
+    )}&format=json&origin=*&srlimit=5`;
+    const res = await fetchJson<WikiSearchResponse>(url, { signal: ctx.signal });
     const results = res?.query?.search ?? [];
     if (results.length === 0) return [];
 
@@ -36,6 +34,8 @@ export const wikipediaConnector: Connector = {
       confidence: 'info' as const,
       query,
       timestamp: Date.now(),
+      raw: res,
+      rawSourceUrl: redactUrl(url),
       data: { pageId: r.pageid },
     }));
   },

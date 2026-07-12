@@ -4,6 +4,7 @@ import { store } from './state';
 import { openSettingsModal } from './ui/settingsModal';
 import { renderFindingCard } from './ui/findingCard';
 import { downloadCsv } from './lib/csvExport';
+import { downloadRawJson } from './lib/rawExport';
 import { getCountryOptions, getRecentCountry, setRecentCountry, guessCountryFromLocale } from './lib/countries';
 import { buildIdentitySummary } from './lib/identitySummary';
 import { getAutoEnrichEnabled, setAutoEnrichEnabled, getMaxDepth, getMaxAutoSearches } from './lib/enrichmentPrefs';
@@ -75,6 +76,7 @@ app.innerHTML = `
     <div class="status" id="status-line"></div>
     <div class="export-actions">
       <button class="hidden" id="btn-stop">⏹ Stop</button>
+      <button id="btn-export-raw">⬇ Export Raw JSON</button>
       <button id="btn-export-csv">⬇ Export CSV</button>
       <button class="primary" id="btn-export-pdf">⬇ Export PDF Report</button>
     </div>
@@ -179,6 +181,11 @@ function findingsForExport(): typeof store.state.findings {
 document.getElementById('btn-export-csv')?.addEventListener('click', () => {
   if (store.state.findings.length === 0) return;
   downloadCsv(findingsForExport(), `osicktool-report-${Date.now()}.csv`);
+});
+
+document.getElementById('btn-export-raw')?.addEventListener('click', () => {
+  if (store.state.findings.length === 0) return;
+  downloadRawJson(store.state.findings, `osicktool-raw-${Date.now()}.json`);
 });
 
 document.getElementById('btn-export-pdf')?.addEventListener('click', async (e) => {

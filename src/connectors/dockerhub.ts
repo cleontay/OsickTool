@@ -1,5 +1,5 @@
 import type { Connector, Finding, SearchQuery } from '../types';
-import { fetchJson, nextId } from '../lib/fetchUtils';
+import { fetchJson, nextId, redactUrl } from '../lib/fetchUtils';
 
 interface DockerHubUser {
   id: string;
@@ -19,10 +19,8 @@ export const dockerhubConnector: Connector = {
   description: 'Public Docker Hub account (best-effort, may be blocked by the source\'s CORS policy).',
   supports: ['username'],
   async run(query: SearchQuery, ctx): Promise<Finding[]> {
-    const user = await fetchJson<DockerHubUser>(
-      `https://hub.docker.com/v2/users/${encodeURIComponent(query.value)}/`,
-      { signal: ctx.signal },
-    );
+    const url = `https://hub.docker.com/v2/users/${encodeURIComponent(query.value)}/`;
+    const user = await fetchJson<DockerHubUser>(url, { signal: ctx.signal });
     if (!user || !user.username) return [];
 
     return [
@@ -37,6 +35,8 @@ export const dockerhubConnector: Connector = {
         confidence: 'confirmed',
         query,
         timestamp: Date.now(),
+        raw: user,
+        rawSourceUrl: redactUrl(url),
         data: {
           fullName: user.full_name ?? undefined,
           company: user.company ?? undefined,
