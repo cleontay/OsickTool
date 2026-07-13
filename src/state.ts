@@ -17,10 +17,24 @@ export interface SearchRunLog {
 export interface HistoryEntry extends SearchQuery {
   depth: number;
   auto: boolean;
+  /** queryKey() of the search that led to this one - undefined for a
+   * genuinely fresh root search typed into the search bar. */
+  parentKey?: string;
+  /** Connector/mechanism that surfaced this lead (e.g. "GitHub Commit
+   * Identity", "Name permutation") - undefined for a root search. */
+  originConnector?: string;
 }
 
 interface AutoQueueItem {
   query: SearchQuery;
+  depth: number;
+  parentKey?: string;
+  originConnector?: string;
+}
+
+export interface SearchLineage {
+  parentKey: string;
+  originConnector: string;
   depth: number;
 }
 
@@ -87,15 +101,18 @@ class Store {
     return this.state.searchedValues.has(queryKey(type, value, country));
   }
 
-  /** Public entry point - always a fresh root (depth 0), runs immediately
-   * rather than waiting behind any in-progress auto-enrichment chain. */
-  async search(query: SearchQuery): Promise<void> {
+  /** Public entry point. A search bar submission passes no lineage (a fresh
+   * root, depth 0); clicking a pivot chip passes its recorded lineage so
+   * the enrichment-chain view can trace it back to what discovered it.
+   * Always runs immediately rather than waiting behind the auto-queue. */
+  async search(query: SearchQuery, lineage?: SearchLineage): Promise<void> {
     const value = query.value.trim();
     if (!value) return;
     const normalized: SearchQuery = { type: query.type, value, country: query.country };
-    if (this.state.searchedValues.has(queryKey(normalized.type, normalized.value, normalized.country))) return;
+    const normalizedKey = queryKey(normalized.type, normalized.value, normalized.country);
+    if (this.state.searchedValues.has(normalizedKey)) return;
 
-    await this.runBatch(normalized, 0, false);
+    await this.runBatch(normalized, lineage?.depth ?? 0, false, lineage?.parentKey, lineage?.originConnector);
 
     // A person's name has no dedicated "search by name" connector, but
     // common handle patterns are worth trying directly - generated
@@ -103,7 +120,7 @@ class Store {
     // whitespace or truncating the string.
     if (normalized.type === 'general' && looksLikePersonName(normalized.value)) {
       for (const handle of generateUsernamePermutations(normalized.value)) {
-        this.seedPivot({ value: handle, type: 'username', origin: 'Name permutation' }, 1);
+        this.seedPivot({ value: handle, type: 'username', origin: 'Name permutation' }, (lineage?.depth ?? 0) + 1, normalizedKey);
       }
       this.emit();
     }
@@ -113,10 +130,16 @@ class Store {
 
   /** Runs every connector matching this query's type, records results, and
    * queues any newly-discovered pivots for auto-enrichment if eligible. */
-  private async runBatch(query: SearchQuery, depth: number, auto: boolean): Promise<void> {
+  private async runBatch(
+    query: SearchQuery,
+    depth: number,
+    auto: boolean,
+    parentKey?: string,
+    originConnector?: string,
+  ): Promise<void> {
     const key = queryKey(query.type, query.value, query.country);
     this.state.searchedValues.add(key);
-    this.state.queryHistory.push({ ...query, depth, auto });
+    this.state.queryHistory.push({ ...query, depth, auto, parentKey, originConnector });
     this.activeOperations++;
     this.updateSearchingFlag();
     this.emit();
@@ -138,7 +161,7 @@ class Store {
             this.state.findings.push(...results);
             this.state.runLog.push({ query, connectorName: connector.name, count: results.length });
 
-            for (const p of results.flatMap(extractPivots)) this.seedPivot(p, depth + 1);
+            for (const p of results.flatMap(extractPivots)) this.seedPivot(p, depth + 1, key);
             this.emit();
           }
           return results;
@@ -152,18 +175,23 @@ class Store {
   }
 
   /** Records a new candidate (a discovered pivot, or a generated name
-   * permutation) as a manually-clickable lead, and additionally queues it
-   * for automatic pursuit if auto-enrich is on and it's within the
-   * configured depth. Does not emit - callers batch several of these
-   * together and emit once. */
-  private seedPivot(p: PivotCandidate, depth: number): void {
+   * permutation) as a manually-clickable lead, tagged with the search that
+   * led to it, and additionally queues it for automatic pursuit if
+   * auto-enrich is on and it's within the configured depth. Does not emit -
+   * callers batch several of these together and emit once. */
+  private seedPivot(p: PivotCandidate, depth: number, parentKey: string): void {
     const pKey = queryKey(p.type, p.value, p.country);
     if (this.state.searchedValues.has(pKey)) return;
     if (this.state.pivots.some((existing) => queryKey(existing.type, existing.value, existing.country) === pKey)) return;
 
-    this.state.pivots.push(p);
+    this.state.pivots.push({ ...p, parentKey, depth });
     if (getAutoEnrichEnabled() && depth <= getMaxDepth()) {
-      this.state.autoQueue.push({ query: { type: p.type, value: p.value, country: p.country }, depth });
+      this.state.autoQueue.push({
+        query: { type: p.type, value: p.value, country: p.country },
+        depth,
+        parentKey,
+        originConnector: p.origin,
+      });
     }
   }
 
@@ -193,7 +221,7 @@ class Store {
       this.updateSearchingFlag();
       this.emit();
 
-      await this.runBatch(item.query, item.depth, true);
+      await this.runBatch(item.query, item.depth, true, item.parentKey, item.originConnector);
     }
 
     this.draining = false;

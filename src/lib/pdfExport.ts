@@ -10,6 +10,7 @@ const TAB_LABELS: Record<TabId, string> = {
   web: 'Web & Infrastructure',
   other: 'General / Other',
   dorks: 'Google Dorks',
+  chain: 'Enrichment Chain',
   pivots: 'Pivot Suggestions',
 };
 
@@ -105,5 +106,6 @@ export const TAB_DEFS: TabDef[] = [
   { id: 'web', label: 'Web & Infrastructure' },
   { id: 'other', label: 'General' },
   { id: 'dorks', label: 'Google Dorks' },
+  { id: 'chain', label: 'Enrichment Chain' },
   { id: 'pivots', label: 'Pivots' },
 ];

@@ -22,6 +22,7 @@ export type TabId =
   | 'web'
   | 'other'
   | 'dorks'
+  | 'chain'
   | 'pivots';
 
 export interface TabDef {
@@ -77,4 +78,10 @@ export interface PivotCandidate {
   origin: string; // connector name that surfaced it
   /** For phone pivots: the region libphonenumber-js resolved while extracting it. */
   country?: string;
+  /** queryKey() of the search that led to this pivot being discovered -
+   * lets the enrichment-chain view trace it back to its parent even if it's
+   * searched much later via a manual click. */
+  parentKey?: string;
+  /** The depth this pivot would be searched at (parent's depth + 1). */
+  depth?: number;
 }
