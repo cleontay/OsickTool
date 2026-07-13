@@ -189,6 +189,33 @@ results without a backend, so this doesn't pretend to:
   snippets feed the same pivot/auto-enrichment engine as everything else, so a
   name or email in a live result can trigger further searches.
 
+## Messaging apps (Telegram / WhatsApp)
+
+- **Telegram** (search by username/handle) - t.me publishes an unauthenticated
+  preview page for any account, channel, group, or bot with a public
+  username, the same metadata a link preview shows: display name, bio, and
+  photo. This connector parses that page for real (requires the [optional
+  CORS proxy](#optional-cors-proxy), since t.me doesn't send CORS headers) -
+  a discovered name feeds the same pivot/auto-enrichment engine as everything
+  else. Telegram never exposes a phone number on this page regardless of
+  privacy settings, so there's no phone-based Telegram lookup - not a
+  limitation of this tool, just not something Telegram ever makes public.
+- **WhatsApp** (search by phone number) - WhatsApp has no public,
+  unauthenticated API or web page that returns a contact's name/photo/about
+  text; the closest thing (WhatsApp Web) only renders anything once you're
+  logged into your *own* session via QR pairing, which a static client-only
+  app can't automate. What's free is WhatsApp's own "click to chat" deep
+  link (`wa.me/<number>`), generated automatically for every phone search -
+  open it yourself to see whether the number is on WhatsApp and, depending
+  on their privacy settings, their name and photo. Nothing is fetched on
+  your behalf, mirroring the [Google Dorking](#google-dorking) link-only
+  tier for the same reason: no free API exists to do more.
+
+Other messaging apps (Signal, Discord, WeChat, Line, ...) aren't included for
+the same reason WhatsApp is link-only: none of them expose a public,
+unauthenticated way to look someone up by phone number or username, so there
+would be nothing honest to build beyond another dead link.
+
 ## Raw responses
 
 Every finding card that came from a network call has a **View raw API
@@ -233,6 +260,8 @@ into your own tooling or just reviewing offline.
 | Phone number analysis | phone | Local: `libphonenumber-js` parsing/validation against the country you select |
 | IC/NRIC decoder | ic | Local: Malaysia MyKad + Singapore NRIC/FIN decoding & checksum |
 | Site Directory | username, social | Generates candidate profile links across 45+ popular platforms that don't expose a public API (Instagram, X, TikTok, LinkedIn, etc.) — unverified by default |
+| **Telegram** | username, social | Parses the public t.me profile preview (name, bio, photo) — requires the optional CORS proxy |
+| **WhatsApp** | phone | Generates a `wa.me` click-to-chat link — no public profile API exists, open it yourself to check |
 | **Google Dork (links)** | all types | Curated Google dork queries as one-click links - no request is ever made on your behalf |
 | **Google Custom Search** | all types | Optional — real ranked Google results for the top dork query; needs a free API key + Search Engine ID in Settings |
 | NumVerify, Hunter.io, Shodan (full) | phone, email, general | Optional — bring your own free-tier API key in Settings |

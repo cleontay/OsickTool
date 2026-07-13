@@ -27,7 +27,8 @@ export const USERNAME_SITES: SiteTemplate[] = [
   { name: 'Mastodon (mastodon.social)', category: 'social', urlTemplate: 'https://mastodon.social/@{u}' },
   { name: 'Bluesky', category: 'social', urlTemplate: 'https://bsky.app/profile/{u}.bsky.social' },
   { name: 'VK', category: 'social', urlTemplate: 'https://vk.com/{u}' },
-  { name: 'Telegram', category: 'social', urlTemplate: 'https://t.me/{u}' },
+  // Telegram is deliberately not listed here - connectors/telegram.ts parses
+  // its real profile (name/bio/photo) instead of just checking a bare link.
   { name: 'YouTube', category: 'social', urlTemplate: 'https://www.youtube.com/@{u}' },
   { name: 'Twitch', category: 'gaming', urlTemplate: 'https://www.twitch.tv/{u}' },
   { name: 'Medium', category: 'creative', urlTemplate: 'https://medium.com/@{u}' },
