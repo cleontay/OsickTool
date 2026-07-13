@@ -12,6 +12,16 @@ export interface SearchQuery {
   value: string;
   /** ISO 3166-1 alpha-2 region code, e.g. "US" - used as a parsing hint for phone queries. */
   country?: string;
+  /** True if this query is a guessed handle (e.g. a generated username
+   * permutation) rather than something extracted from data already
+   * confirmed about the target. An account existing under a guessed handle
+   * only confirms the handle is taken - not that it belongs to the target -
+   * so findings from a speculative query must never be folded into the
+   * Consolidated Profile as if they were verified facts. Propagates to any
+   * further pivots discovered from a speculative search's own results,
+   * since everything downstream of an unverified guess is equally
+   * unverified. */
+  speculative?: boolean;
 }
 
 export type TabId =
@@ -84,4 +94,7 @@ export interface PivotCandidate {
   parentKey?: string;
   /** The depth this pivot would be searched at (parent's depth + 1). */
   depth?: number;
+  /** See SearchQuery.speculative - true for a guessed handle (e.g. a name
+   * permutation) rather than something extracted from confirmed data. */
+  speculative?: boolean;
 }

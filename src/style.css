@@ -491,6 +491,24 @@ button.small { padding: 5px 10px; font-size: 12px; }
   border-radius: 999px;
   padding: 2px 7px;
 }
+.pv-guess {
+  font-size: 10px;
+  color: #b45309;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+
+.fc-speculative {
+  font-size: 12px;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 8px;
+}
 
 /* ---------- Enrichment chain tab ---------- */
 .chain-tree {

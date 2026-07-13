@@ -99,6 +99,30 @@ findings already collected are kept, nothing is lost.
 Turn it off entirely with the checkbox next to the search bar (or in Settings)
 to go back to click-to-pivot behavior.
 
+### Guessed handles vs. confirmed leads
+
+A person's name has no dedicated "search by name" API, so OsickTool also
+generates a handful of common handle patterns from it (`firstlast`,
+`first.last`, all words run together, etc.) and checks whether each one
+exists - the same approach every username-guessing OSINT tool uses. That's
+a *guess*: a generated handle existing as a real account only confirms the
+handle is taken, not that the account belongs to your target - common names
+in particular can and do collide with a completely unrelated person.
+
+To keep that uncertainty from quietly becoming "fact," anything discovered
+through a guessed handle (and anything discovered *from* that account's own
+data, cascading down the chain) is marked **speculative**:
+
+- It still shows up normally in its own tab, still gets exported, and still
+  drives further auto-enrichment exactly like any other lead.
+- It's flagged with an amber **⚠ Guessed handle match** banner on its finding
+  card and a **guess** badge wherever it appears in the Pivots and
+  Enrichment Chain tabs, so it's visually obvious at a glance.
+- It is **excluded from the Consolidated Profile** - a stranger's name,
+  company, or location never gets folded in as if it were a confirmed fact
+  about your target just because a guessed handle happened to resolve to a
+  real person.
+
 ## Enrichment Chain
 
 Auto-enrichment makes a lot of searches happen without you clicking anything -

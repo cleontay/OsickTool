@@ -108,7 +108,7 @@ class Store {
   async search(query: SearchQuery, lineage?: SearchLineage): Promise<void> {
     const value = query.value.trim();
     if (!value) return;
-    const normalized: SearchQuery = { type: query.type, value, country: query.country };
+    const normalized: SearchQuery = { type: query.type, value, country: query.country, speculative: query.speculative };
     const normalizedKey = queryKey(normalized.type, normalized.value, normalized.country);
     if (this.state.searchedValues.has(normalizedKey)) return;
 
@@ -120,7 +120,11 @@ class Store {
     // whitespace or truncating the string.
     if (normalized.type === 'general' && looksLikePersonName(normalized.value)) {
       for (const handle of generateUsernamePermutations(normalized.value)) {
-        this.seedPivot({ value: handle, type: 'username', origin: 'Name permutation' }, (lineage?.depth ?? 0) + 1, normalizedKey);
+        this.seedPivot(
+          { value: handle, type: 'username', origin: 'Name permutation (unverified guess)', speculative: true },
+          (lineage?.depth ?? 0) + 1,
+          normalizedKey,
+        );
       }
       this.emit();
     }
@@ -161,7 +165,13 @@ class Store {
             this.state.findings.push(...results);
             this.state.runLog.push({ query, connectorName: connector.name, count: results.length });
 
-            for (const p of results.flatMap(extractPivots)) this.seedPivot(p, depth + 1, key);
+            // Anything discovered from a speculative (guessed-handle) search's
+            // own results is equally unverified - a guessed username hitting a
+            // real account doesn't confirm that account is the target, so
+            // nothing found on it can be trusted as confirmed either.
+            for (const p of results.flatMap(extractPivots)) {
+              this.seedPivot({ ...p, speculative: p.speculative || query.speculative }, depth + 1, key);
+            }
             this.emit();
           }
           return results;
@@ -187,7 +197,7 @@ class Store {
     this.state.pivots.push({ ...p, parentKey, depth });
     if (getAutoEnrichEnabled() && depth <= getMaxDepth()) {
       this.state.autoQueue.push({
-        query: { type: p.type, value: p.value, country: p.country },
+        query: { type: p.type, value: p.value, country: p.country, speculative: p.speculative },
         depth,
         parentKey,
         originConnector: p.origin,

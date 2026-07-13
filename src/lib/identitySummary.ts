@@ -1,5 +1,6 @@
 import type { Finding } from '../types';
 import { isUsableName } from './textFilters';
+import { looksLikePersonName } from './classify';
 
 // Fields holding a single freeform value - must NOT be comma-split, since
 // values like "Austin, TX" or "Doe & Associates, LLC" are one atomic value
@@ -75,10 +76,26 @@ function estimateAge(birthDate: string): number | null {
  * showed up on two or more independent sources carry more weight than any
  * single source alone.
  */
-export function buildIdentitySummary(findings: Finding[]): Finding | null {
+export function buildIdentitySummary(allFindings: Finding[]): Finding | null {
+  // A guessed handle (e.g. a generated username permutation) existing as a
+  // real account only confirms the handle is taken - not that the account
+  // belongs to the target. Folding its name/company/location fields into
+  // the "confirmed" profile would misattribute a stranger's identity to the
+  // target just because a common name produced a collision. Speculative
+  // findings still surface normally in their own tab (and still drive
+  // further enrichment) - they're only excluded from this aggregation.
+  const findings = allFindings.filter((f) => !f.query.speculative);
   if (findings.length === 0) return null;
 
-  const names = collectAtomic(findings, NAME_KEYS);
+  // A general-type search is only ever run because someone typed that exact
+  // name in expecting it to be about the target - unlike a data field
+  // *found* on some other source, there's no ambiguity about whose name it
+  // is. Include it directly rather than relying on some connector to have
+  // echoed it back in a "name" field.
+  const names = new Set([
+    ...collectAtomic(findings, NAME_KEYS),
+    ...[...collectSearchedValues(findings, 'general')].filter(looksLikePersonName),
+  ]);
   const emails = new Set([
     ...collectAtomic(findings, EMAIL_KEYS),
     ...collectList(findings, EMAIL_LIST_KEYS),

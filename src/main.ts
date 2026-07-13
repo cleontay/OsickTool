@@ -344,14 +344,14 @@ function renderPivotsPanel(): HTMLElement {
     const item = document.createElement('div');
     item.className = 'pivot-item';
     const queued = queuedKeys.has(`${p.type}:${p.value.toLowerCase()}`);
-    item.innerHTML = `<span class="pv-type">${p.type}</span><span>${p.value}${p.country ? ` (${p.country})` : ''}</span>${queued ? '<span class="pv-queued">queued</span>' : ''}`;
+    item.innerHTML = `<span class="pv-type">${p.type}</span><span>${p.value}${p.country ? ` (${p.country})` : ''}</span>${p.speculative ? '<span class="pv-guess" title="Guessed handle - existence isn\'t confirmation it belongs to the target">guess</span>' : ''}${queued ? '<span class="pv-queued">queued</span>' : ''}`;
     const searchBtn = document.createElement('button');
     searchBtn.className = 'small primary';
     searchBtn.textContent = 'Search';
     searchBtn.addEventListener('click', () => {
       store.removePivot(p.value, p.type, p.country);
       const lineage = p.parentKey ? { parentKey: p.parentKey, originConnector: p.origin, depth: p.depth ?? 1 } : undefined;
-      store.search({ type: p.type, value: p.value, country: p.country }, lineage);
+      store.search({ type: p.type, value: p.value, country: p.country, speculative: p.speculative }, lineage);
     });
     const dismissBtn = document.createElement('button');
     dismissBtn.className = 'small ghost';

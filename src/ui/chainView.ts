@@ -37,6 +37,14 @@ function renderNode(node: ChainNode): HTMLElement {
     row.appendChild(count);
   }
 
+  if (node.entry.speculative) {
+    const guess = document.createElement('span');
+    guess.className = 'pv-guess';
+    guess.title = "Guessed handle - existence isn't confirmation it belongs to the target";
+    guess.textContent = 'guess';
+    row.appendChild(guess);
+  }
+
   const descendants = countDescendants(node);
   if (descendants > 0) {
     const spawned = document.createElement('span');
