@@ -26,6 +26,13 @@ export function renderFindingCard(finding: Finding): HTMLElement {
   `;
   card.appendChild(head);
 
+  if (finding.query.speculative) {
+    const warn = document.createElement('div');
+    warn.className = 'fc-speculative';
+    warn.textContent = '⚠ Guessed handle match — this account exists, but may belong to a different person. Not folded into the Consolidated Profile.';
+    card.appendChild(warn);
+  }
+
   if (finding.detail) {
     const detail = document.createElement('div');
     detail.className = 'fc-detail';

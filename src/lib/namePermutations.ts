@@ -20,6 +20,12 @@ export function generateUsernamePermutations(fullName: string): string[] {
   const middleInitial = words.length > 2 ? words[1][0] : '';
 
   const candidates = [
+    // Every word run together in order - the single most realistic guess
+    // for any multi-part name, and especially so for romanized CJK names
+    // (e.g. "Song Yu Qi" -> "songyuqi"), where people commonly register
+    // handles as their full pinyin rather than an English-style
+    // first-initial/last-name contraction.
+    words.join(''),
     `${first}${last}`,
     `${first}.${last}`,
     `${first}_${last}`,
