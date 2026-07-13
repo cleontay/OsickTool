@@ -21,7 +21,9 @@ as a PWA.
    result turns up is automatically searched too, and whatever *that* turns up
    keeps going - so one email search can chain into usernames, phone numbers,
    and further emails without you clicking anything. See [Auto-enrichment](#auto-enrichment)
-   below for how the chain is kept from running away with itself.
+   below for how the chain is kept from running away with itself, and the
+   **Enrichment Chain** tab (see [Enrichment Chain](#enrichment-chain)) for a
+   tree view of exactly how each search led to the next.
 4. Sources that can reveal a real name/email behind a handle - GitHub commit
    authorship, domain WHOIS/RDAP registrant records, cross-referenced profile
    fields - feed a **Consolidated Profile** card pinned atop the Identity tab,
@@ -96,6 +98,31 @@ findings already collected are kept, nothing is lost.
 
 Turn it off entirely with the checkbox next to the search bar (or in Settings)
 to go back to click-to-pivot behavior.
+
+## Enrichment Chain
+
+Auto-enrichment makes a lot of searches happen without you clicking anything -
+the **Enrichment Chain** tab is how you see *how you got there*. Instead of a
+flat list of every query run, it's the actual discovery tree: your original
+search at the root, and every lead it (directly or indirectly) turned into a
+new search nested underneath, however deep the chain went.
+
+Each node shows:
+
+- The search itself (type + value), with ⚡ for one auto-enrichment fired on
+  its own vs. 🔍 for one you typed or clicked yourself.
+- How many findings that specific search produced.
+- **via `<connector>`** underneath - which source is the reason this search
+  happened at all (e.g. "via Gravatar (linked account)" means Gravatar's
+  profile for the parent email listed this handle).
+- A "led to N more searches" badge when a node has descendants, so you can
+  spot which single result was the most productive lead without walking the
+  whole tree.
+
+A pivot you click manually from the Pivots tab keeps its place in the same
+tree (attached under whatever search first surfaced it), even if you click it
+long after that original search finished - so the chain stays accurate
+whether enrichment was automatic, manual, or a mix of both.
 
 ## Google Dorking
 

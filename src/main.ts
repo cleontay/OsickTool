@@ -9,6 +9,8 @@ import { getCountryOptions, getRecentCountry, setRecentCountry, guessCountryFrom
 import { buildIdentitySummary } from './lib/identitySummary';
 import { getAutoEnrichEnabled, setAutoEnrichEnabled, getMaxDepth, getMaxAutoSearches } from './lib/enrichmentPrefs';
 import { classifyQuery } from './lib/classify';
+import { buildChainTree } from './lib/enrichmentChain';
+import { renderChainView } from './ui/chainView';
 
 const QUERY_TYPE_LABELS: Record<QueryType, string> = {
   username: 'Username',
@@ -29,6 +31,7 @@ const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'web', label: 'Web & Infra' },
   { id: 'other', label: 'General' },
   { id: 'dorks', label: 'Google Dorks' },
+  { id: 'chain', label: 'Enrichment Chain' },
   { id: 'pivots', label: 'Pivots' },
 ];
 
@@ -277,7 +280,12 @@ function render(): void {
   // Tabs
   tabsEl.innerHTML = '';
   for (const tab of TABS) {
-    let count = tab.id === 'pivots' ? pivots.length : findings.filter((f) => f.tab === tab.id).length;
+    let count =
+      tab.id === 'pivots'
+        ? pivots.length
+        : tab.id === 'chain'
+          ? queryHistory.length
+          : findings.filter((f) => f.tab === tab.id).length;
     if (tab.id === 'identity' && identitySummary) count += 1;
     const btn = document.createElement('button');
     btn.className = `tab-btn${activeTab === tab.id ? ' active' : ''}`;
@@ -290,6 +298,8 @@ function render(): void {
   resultsEl.innerHTML = '';
   if (activeTab === 'pivots') {
     resultsEl.appendChild(renderPivotsPanel());
+  } else if (activeTab === 'chain') {
+    resultsEl.appendChild(renderChainView(buildChainTree(queryHistory, findings)));
   } else {
     const items = findings.filter((f) => f.tab === activeTab);
     if (activeTab === 'identity' && identitySummary) items.unshift(identitySummary);
@@ -340,7 +350,8 @@ function renderPivotsPanel(): HTMLElement {
     searchBtn.textContent = 'Search';
     searchBtn.addEventListener('click', () => {
       store.removePivot(p.value, p.type, p.country);
-      store.search({ type: p.type, value: p.value, country: p.country });
+      const lineage = p.parentKey ? { parentKey: p.parentKey, originConnector: p.origin, depth: p.depth ?? 1 } : undefined;
+      store.search({ type: p.type, value: p.value, country: p.country }, lineage);
     });
     const dismissBtn = document.createElement('button');
     dismissBtn.className = 'small ghost';

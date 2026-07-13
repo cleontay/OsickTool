@@ -492,6 +492,83 @@ button.small { padding: 5px 10px; font-size: 12px; }
   padding: 2px 7px;
 }
 
+/* ---------- Enrichment chain tab ---------- */
+.chain-tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.chain-tree-root {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chain-tree .chain-tree {
+  margin-top: 10px;
+  padding-left: 22px;
+  border-left: 2px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chain-node {
+  margin: 0;
+}
+.chain-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.chain-marker {
+  font-size: 13px;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.chain-marker.auto {
+  background: #fef3c7;
+  color: #b45309;
+}
+.chain-marker.manual {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+.chain-value {
+  font-weight: 600;
+  word-break: break-word;
+}
+.chain-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: #eef2f7;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.chain-spawned {
+  font-size: 11px;
+  color: #0e7490;
+  background: #ecfeff;
+  border: 1px solid #a5f3fc;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.chain-origin {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 2px 0 0 30px;
+  font-style: italic;
+}
+
 /* ---------- Settings modal ---------- */
 .modal-backdrop {
   position: fixed;
