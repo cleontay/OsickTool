@@ -23,6 +23,8 @@ import { ipGeoConnector } from './ipGeo';
 import { rdapConnector } from './rdap';
 import { googleDorkLinksConnector } from './googleDorkLinks';
 import { googleCustomSearchConnector } from './googleCustomSearch';
+import { telegramConnector } from './telegram';
+import { whatsappConnector } from './whatsapp';
 
 export const CONNECTORS: Connector[] = [
   // Identity
@@ -40,6 +42,7 @@ export const CONNECTORS: Connector[] = [
   lichessConnector,
   codeforcesConnector,
   unverifiedSitesConnector,
+  telegramConnector,
   // Email
   emailFormatConnector,
   gravatarConnector,
@@ -47,6 +50,7 @@ export const CONNECTORS: Connector[] = [
   // Phone
   phoneLocalConnector,
   numverifyConnector,
+  whatsappConnector,
   // Web / general
   dnsConnector,
   duckduckgoConnector,
