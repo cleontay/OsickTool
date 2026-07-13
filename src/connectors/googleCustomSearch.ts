@@ -44,7 +44,7 @@ export const googleCustomSearchConnector: Connector = {
     const shapeCheck = SHAPE_CHECKS[query.type];
     if (shapeCheck && !shapeCheck(query.value)) return [];
 
-    const [topDork] = buildDorkQueries(query.type, query.value);
+    const [topDork] = buildDorkQueries(query.type, query.value, query.country);
     if (!topDork) return [];
 
     const url = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(apiKey)}&cx=${encodeURIComponent(cx)}&q=${encodeURIComponent(topDork.query)}&num=10`;

@@ -19,7 +19,7 @@ export const googleDorkLinksConnector: Connector = {
   description: 'Curated Google dork queries as one-click links - opens in your own browser, nothing is fetched automatically.',
   supports: ['username', 'email', 'phone', 'ic', 'social', 'general', 'dork'],
   async run(query: SearchQuery): Promise<Finding[]> {
-    const dorks = buildDorkQueries(query.type, query.value);
+    const dorks = buildDorkQueries(query.type, query.value, query.country);
 
     return dorks.map((d) => ({
       id: nextId(),
