@@ -1,3 +1,4 @@
+import { getCountries } from 'libphonenumber-js';
 import type { QueryType } from '../types';
 
 const DOMAIN_RE = /^(?:[a-z0-9-]+\.)+[a-z]{2,}$/i;
@@ -13,6 +14,20 @@ function quote(value: string): string {
   return `"${value}"`;
 }
 
+/** Resolves an ISO 3166-1 alpha-2 code (e.g. "SG") to its English display
+ * name (e.g. "Singapore") via the built-in Intl API - no extra data file.
+ * Intl.DisplayNames doesn't reject a syntactically-valid-looking but unused
+ * code (e.g. "ZZ"), so the code is cross-checked against libphonenumber-js's
+ * actual supported region list first. */
+function countryName(code: string): string | null {
+  if (!getCountries().includes(code as ReturnType<typeof getCountries>[number])) return null;
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' }).of(code) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Builds a curated set of Google dork queries tailored to the query type -
  * standard, widely-documented OSINT recon patterns (exact-phrase search,
@@ -22,7 +37,7 @@ function quote(value: string): string {
  * Search has no CORS-enabled, keyless API, and scraping it isn't something
  * a client-only static app should attempt).
  */
-export function buildDorkQueries(type: QueryType, value: string): DorkQuery[] {
+export function buildDorkQueries(type: QueryType, value: string, country?: string): DorkQuery[] {
   const v = value.trim();
   if (!v) return [];
 
@@ -39,11 +54,24 @@ export function buildDorkQueries(type: QueryType, value: string): DorkQuery[] {
         { query: `intext:${quote(v)}`, purpose: 'Mentioned in page body text' },
       ];
 
-    case 'phone':
-      return [
+    case 'phone': {
+      const dorks: DorkQuery[] = [
         { query: quote(v), purpose: 'Exact mentions anywhere' },
         { query: `${quote(v)} (contact OR profile OR resume OR "about us")`, purpose: 'Contact/profile pages' },
       ];
+      // A phone number alone is ambiguous across the many local-format
+      // variants a site might display it in - narrowing by the number's own
+      // resolved country cuts down on unrelated results from elsewhere in
+      // the world that just happen to share the same digits out of context.
+      const cName = country ? countryName(country) : null;
+      if (cName) {
+        dorks.push({
+          query: `${quote(v)} ${quote(cName)} (contact OR profile OR resume OR "about us")`,
+          purpose: `Contact/profile pages in ${cName}`,
+        });
+      }
+      return dorks;
+    }
 
     case 'username':
     case 'social':

@@ -157,6 +157,13 @@ directory listings for a domain, and so on). Pick **Google Dork** as the search
 type to type a fully custom dork instead (e.g.
 `site:example.com filetype:sql "password"`).
 
+A phone number search gets one extra dork on top of the usual set once a
+country is selected: the same contact/profile/resume query narrowed by the
+number's resolved country name (e.g. `"+65..." "Singapore" (contact OR
+profile OR resume OR "about us")`). A bare phone number is ambiguous across
+whatever local format a site happens to display it in, so tying the search
+to its country cuts down on unrelated results from elsewhere in the world.
+
 This works in two tiers, because **Google Search has no free, CORS-enabled API**
 - there's no honest way for a static client-only app to fetch and parse Google
 results without a backend, so this doesn't pretend to:
